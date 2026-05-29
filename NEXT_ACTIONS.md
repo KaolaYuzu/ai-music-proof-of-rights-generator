@@ -1,53 +1,45 @@
-# NEXT ACTIONS — v3.5.0 REVISE7f
+# NEXT ACTIONS — v3.5.0 REVISE7g
 
-**Status:** Code QA PASS — Mobile Visual QA Pending
+**Status:** Deployed to Vercel — pending real-device QA
 **Date:** 2026-05-29
 
 ---
 
-## Before Merging / Publishing
+## Real Device QA (Immediate)
 
-- [ ] **Mobile visual QA** — Open in Chrome DevTools at 390px and 430px:
-  - Main form fields visible and fillable
-  - No horizontal scrolling
-  - Sidebar and status panel stacked below main content
-  - Required `*` markers still visible
-  - Save draft / Clear draft still functional
-  - Desktop layout (> 900px) unaffected
+Deploy to Vercel and test on:
+
+- **iOS Safari 390px (iPhone 15 / 15 Pro)**
+  - [ ] Center column shows on load (no manual scroll needed)
+  - [ ] Left/right swipe works between 3 panels
+  - [ ] Propri mascot fully visible in left panel
+  - [ ] Step list scrolls within left panel
+  - [ ] Center form fully fillable
+  - [ ] Right status panel reachable by swiping right
+  - [ ] No content clipped without scroll access
+
+- **iOS Chrome / Android Chrome 430px**
+  - [ ] Same checks as above
+
+- **Desktop Chrome > 900px**
+  - [ ] Three-column layout unchanged
+  - [ ] Save draft / Clear draft / export blocker functional
+
+---
+
+## Before Production Launch
+
 - [ ] Replace Portaly placeholder URL (`https://portaly.cc/kaola`) with live payment link
-- [ ] Configure private redemption codes in a private build (not in this public package)
-- [ ] Confirm GitHub repo visibility (public / private) before push
+- [ ] Configure private redemption codes in private build (not in this public repo)
 
 ---
 
 ## v3.5.x Follow-up
 
-- [ ] Add "credits low" warning (balance = 1)
-- [ ] Show export count history in sidebar
-- [ ] Test full Portaly → code delivery → in-app redeem flow end-to-end
+- [ ] "Credits low" warning (balance = 1)
+- [ ] Export count history in sidebar
 
----
+## v4
 
-## v4 Future Scope
-
-- [ ] Batch mode (EP / Album) — "Coming in v4" placeholder in current UI
-- [ ] Multi-track export
-- [ ] Server-side credit verification (replace localStorage prototype)
-
----
-
-## Known Intentional Design Choices (Not Bugs)
-
-- "Step N of 8" label: intentionally English in both languages
-- `AI_Music_Proof_of_Rights_` in filenames: intentionally English
-- `propri` brand name: not translated by design
-- Step 7 preview: NOT credit-gated by design (preview ≠ export)
-- `Local-First Archive` in JSON field: intentionally English
-
----
-
-## Prototype Limitations (Not to Fix in v3.5.x)
-
-- localStorage credit gating not production-secure (DevTools bypassable)
-- No server-side validation of codes or balance
-- Portaly link is placeholder only
+- [ ] Batch mode (EP / Album)
+- [ ] Server-side credit verification

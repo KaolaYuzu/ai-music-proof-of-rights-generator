@@ -1,100 +1,70 @@
 # AI Music Proof-of-Rights Generator
 
-**Version:** v3.5.0 CreditGate PortalyMVP — REVISE7f
+**Version:** v3.5.0 CreditGate PortalyMVP — REVISE7g
 **Date:** 2026-05-29
-**Status:** ✅ Desktop QA Passed · ⚠️ Mobile Visual QA Pending
-
----
-
-## What This Is
-
-A local-first, single-file web app that helps AI music creators document their proof-of-rights — tracking authorship, ownership, AI tool usage, sampling disclosures, and export-ready JSON/PDF records.
-
-No backend. No API keys. No accounts required. All data stays in your browser (localStorage).
+**Status:** ✅ Desktop QA Passed · ⚠️ Mobile Visual QA Pending (real device)
 
 ---
 
 ## How to Open
 
-Open `index.html` directly in Chrome. No server needed.
+Open `index.html` in Chrome. No server required. Keep `assets/` in the same folder.
 
-```
-open index.html
-```
-
-Keep `assets/` in the same directory as `index.html`.
+For Vercel: deploy this folder as-is. `index.html` at root is served automatically.
 
 ---
 
-## Mobile Responsive (REVISE7f)
+## Mobile Layout (REVISE7g — Horizontal Workspace)
 
-This version includes a mobile breakpoint at `≤ 900px`:
+This version uses a **horizontal swipe workspace** on mobile (≤ 900px):
 
-- Single-column stacked layout (main form first, then sidebar, then status panel)
-- All form fields `100% width` — no horizontal scrolling required
-- iOS font-size `16px` to prevent auto-zoom on input focus
-- `.f2` two-column grids collapse to single column
-- Modals resize to `94vw`
-- Desktop three-column layout (> 900px) unchanged
+- Three columns preserved at fixed widths: **Left 320px · Center 440px · Right 320px**
+- `#app` is the horizontal scroll container — users swipe left/right between panels
+- On load, JS auto-scrolls to the **center (form) column** (`app.scrollLeft = 320`)
+- `scroll-snap-type: x mandatory` — swipe snaps cleanly to each column
+- Each column scrolls independently in the vertical direction
+- Desktop layout (> 900px): three-column grid unchanged
 
 ---
 
 ## Commercial Logic (CreditGate)
 
-| Action | Requirement |
-|--------|-------------|
-| Free trial | 1 formal proof export (trial detected via localStorage) |
-| Paid export | 1 credit = 1 formal proof export |
+| | |
+|---|---|
+| Free trial | 1 formal export |
+| Paid export | 1 credit = 1 export |
 | Starter Pack | US$5 = 6 credits |
 | Creator Pack | US$20 = 25 credits |
-| Payment & code delivery | Portaly (`https://portaly.cc/kaola`) — replace before launch |
-| Credit redemption | Redeem code in-app → credits added to localStorage |
-| Export gate | WebApp enforces trial / balance / readiness before export |
+| Payment | Portaly (`https://portaly.cc/kaola`) — replace before launch |
+| Export gate | Enforced in-app via localStorage |
 
-> **Public package note:** Redemption codes are removed from this public package. Configure private redemption codes before deployment. Do not commit live redemption codes to a public repository.
+> Redemption codes are removed from this public package. Configure private codes before deployment. Do not commit live redemption codes to a public repository.
 
 ---
 
 ## Required Fields
 
-**Step 1 — Work Identity (all 7 required):**
-Track Title, Artist Name, Release Type, Version Name, Language, Genre & Mood, Release Date (or "尚未確定")
+**Step 1 — Work Identity (7 required):** Track Title, Artist Name, Release Type, Version Name, Language, Genre & Mood, Release Date
 
-**Step 4 — Ownership & Rights (all 10 required):**
-Master Owner, Composition Owner, Lyricist, Composer, Producer, Performer, Featured Artist (enter "None" if N/A), Royalty Split, Sample Use, Cover Art Rights
+**Step 4 — Ownership & Rights (10 required):** Master Owner, Composition Owner, Lyricist, Composer, Producer, Performer, Featured Artist, Royalty Split, Sample Use, Cover Art Rights
 
 ---
 
 ## File Structure
 
 ```
-index.html          — Main app (all CSS/JS inline, single file)
-assets/
-  propi/
-    propri_main.png
-    propri_front.png
-    propri_focus.png
-    propri_side.png
-README.md
-CHANGELOG.md
-QA_LOG.md
-NEXT_ACTIONS.md
+index.html
+assets/propi/propri_main.png
+assets/propi/propri_front.png
+assets/propi/propri_focus.png
+assets/propi/propri_side.png
 ```
-
----
-
-## Intentional Design Choices
-
-- "Step N of 8" eyebrow: intentionally English in both language modes
-- `AI_Music_Proof_of_Rights_` in filenames: intentionally English
-- `propri` brand name: intentionally not translated
-- Step 7 preview: intentionally NOT credit-gated (preview ≠ export)
 
 ---
 
 ## Prototype Limitations
 
-- localStorage is bypassable via DevTools — not for production monetization
-- No server-side validation of redeem codes or credit balance
-- Portaly URL `https://portaly.cc/kaola` is a placeholder — replace before public launch
-- No multi-track or batch export (planned for v4)
+- localStorage is bypassable via DevTools
+- No server-side validation
+- Portaly URL is a placeholder
+- No batch/multi-track export (planned v4)
