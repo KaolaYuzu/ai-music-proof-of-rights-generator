@@ -1,4 +1,4 @@
-# NEXT ACTIONS — v3.5.0 REVISE7g
+# NEXT ACTIONS — v3.5.0 REVISE7h
 
 **Status:** Deployed to Vercel — pending real-device QA
 **Date:** 2026-05-29

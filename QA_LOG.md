@@ -1,7 +1,7 @@
-# QA Log — v3.5.0 REVISE7g (PublicGitHubSafe)
+# QA Log — v3.5.0 REVISE7h (PublicGitHubSafe)
 
-**Version:** v3.5.0 REVISE7g · 2026-05-29
-**Status:** Code QA 18/18 PASS · Mobile visual QA pending (real device / Vercel)
+**Version:** v3.5.0 REVISE7h · 2026-05-29
+**Status:** Code QA 24/24 PASS · Mobile Visual QA pending (real device)
 
 ---
 
@@ -9,28 +9,35 @@
 
 ---
 
-## Mobile Code QA — 18/18 PASS
+## REVISE7h Code QA — 24/24 PASS
 
 | # | Check | |
 |---|-------|-|
-| G1 | Version `v3.5.0 REVISE7g · 2026-05-29 · Local-First` | ✅ |
-| G2 | 3-col fixed widths 320px + 440px + 320px | ✅ |
-| G3 | `#app min-width: 1080px` | ✅ |
-| G4 | `#app overflow-x: auto` | ✅ |
-| G5 | `-webkit-overflow-scrolling: touch` | ✅ |
-| G6 | `scroll-snap-type: x mandatory` | ✅ |
-| G7 | `#app height: 100vh` | ✅ |
-| G8 | `html, body overflow: hidden` | ✅ |
-| G9 | `#sb / #pv position: relative` (sticky removed) | ✅ |
-| G10 | Step list `flex: 1 1 0; max-height: none` | ✅ |
-| G11 | Panels `max-height: none` | ✅ |
-| G12 | `input font-size: 16px` (iOS zoom prevention) | ✅ |
-| G13 | `scroll-snap-align: start` on panels | ✅ |
-| G14 | `scrollToCenter` JS function present | ✅ |
-| G15 | Desktop `330px 1fr 330px` preserved in base CSS | ✅ |
-| G16 | All REVISE7e core functions untouched | ✅ |
-| G17 | `app.scrollLeft = 320` present | ✅ |
-| G18 | JS syntax OK | ✅ |
+| H1 | wsScroll wrapper div in HTML (`id="wsScroll"`) | ✅ |
+| H2 | ws-inner div in HTML (`class="ws-inner"`) | ✅ |
+| H3 | `/ws-inner` comment present | ✅ |
+| H4 | `/ws-scroll` comment present | ✅ |
+| V1 | Version `v3.5.0 REVISE7h · 2026-05-29 · Local-First` | ✅ |
+| V2 | No REVISE7g/7f version strings | ✅ |
+| D1 | `#app` uses `grid-area: ws` | ✅ |
+| D2 | `.ws-inner` has `330px 1fr 330px` desktop columns | ✅ |
+| D3 | `.ws-inner` has `grid-template-areas: "sb mn pv"` | ✅ |
+| D4 | `#app` has `"ws"` grid area | ✅ |
+| M1 | `@media (max-width: 900px)` present | ✅ |
+| M2 | REVISE7h mobile block comment present | ✅ |
+| M3 | `.ws-scroll` has `-webkit-overflow-scrolling: touch` | ✅ |
+| M4 | `scroll-snap-type: x mandatory` on `.ws-scroll` | ✅ |
+| M5 | `touch-action: pan-x pan-y` on `.ws-scroll` | ✅ |
+| M6 | `320px 440px 320px` mobile column widths | ✅ |
+| M7 | `.ws-inner` has `width: 1080px` | ✅ |
+| M8 | `font-size: 16px !important` on inputs (iOS zoom fix) | ✅ |
+| M9 | `100svh` used for mobile app height | ✅ |
+| S1 | `html`/`body` NOT locked with `overflow:hidden` (both axes) | ✅ |
+| S2 | `overflow-x: hidden` on body (x-axis clip only) | ✅ |
+| S3 | `overflow-y: auto` on body | ✅ |
+| J1 | `wsScroll.scrollLeft = 320` in JS | ✅ |
+| J2 | REVISE7h JS comment present | ✅ |
+| JS | Node --check: no syntax errors | ✅ |
 
 ---
 

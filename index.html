@@ -113,11 +113,24 @@ body {
   position: relative; z-index: 1;
   display: grid;
   grid-template-rows: auto 1fr;
-  grid-template-columns: 330px 1fr 330px;
+  grid-template-columns: 1fr;
   grid-template-areas:
-    "hd  hd  hd"
-    "sb  mn  pv";
+    "hd"
+    "ws";
   min-height: 100vh;
+}
+.ws-scroll {
+  grid-area: ws;
+  display: flex;
+  min-height: 0;
+}
+.ws-inner {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: 330px 1fr 330px;
+  grid-template-areas: "sb mn pv";
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1352,109 +1365,77 @@ html[lang="en"] .save-pill {
 .gate-pack.highlight .gate-pack-credits { color: var(--lavender); }
 .gate-divider { text-align: center; font-size: 12px; color: rgba(255,255,255,.3); margin: 12px 0; }
 
-/* ════════════════════════════════════════════
-   REVISE7g: Mobile Horizontal Workspace
-   Breakpoint: ≤ 900px (iPhone 390px / 430px)
-   
-   Strategy: #app becomes horizontal scroll container.
-   Three columns preserved at fixed widths (320 + 440 + 320 = 1080px).
-   User swipes left/right between panels.
-   JS auto-scrolls to center column on load.
-   Desktop (> 900px): UNCHANGED.
-════════════════════════════════════════════ */
-
+/* ===== REVISE7h MOBILE HORIZONTAL WORKSPACE (max-width:900px) =====
+   Root cause fix: dedicated .ws-scroll container; html/body NOT locked.
+   REVISE7g failed on iPhone Safari because html,body{overflow:hidden}
+   blocks ALL touch-scroll including descendants.
+================================================================== */
 @media (max-width: 900px) {
 
-  /* Lock html/body to viewport; #app handles all scrolling */
-  html, body {
-    height: 100%;
-    overflow: hidden;
-  }
-
-  /* ── #app: horizontal scroll container ── */
-  #app {
-    grid-template-columns: 320px 440px 320px;   /* fixed column widths */
-    min-width: 1080px;                           /* wider than viewport → enables swipe */
-    width: 1080px;
-    height: 100vh;
-    min-height: 0;                               /* override base min-height: 100vh */
-    overflow-x: auto;                            /* horizontal swipe */
-    overflow-y: hidden;                          /* panels handle own vertical scroll */
-    -webkit-overflow-scrolling: touch;           /* iOS momentum scroll */
-    scroll-behavior: smooth;
-    scroll-snap-type: x mandatory;              /* snap to column boundaries */
-  }
-
-  /* ── Header: spans full 1080px width ── */
-  #hd {
-    padding: 12px 20px 0;
-    box-sizing: border-box;
-  }
-
-  /* ── Each panel: full height, independent vertical scroll ── */
-  /* Panels fill row 2 (1fr) of the grid = 100vh minus header */
-  #sb {
-    position: relative;              /* override base position: sticky */
-    height: 100%;
-    max-height: none;               /* override 100vh cap */
+  html {
+    overflow-x: hidden;   /* x-axis clip only — does NOT block touch events */
     overflow-y: auto;
+  }
+  body {
     overflow-x: hidden;
-    padding: var(--sp-lg) var(--sp-md) var(--sp-lg) var(--sp-lg);
-    box-sizing: border-box;
-    scroll-snap-align: start;
+    overflow-y: auto;
+    height: auto;
   }
 
-  #mn {
+  #app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+    min-width: unset;
+    overflow: visible;
+  }
+
+  /* ── Dedicated horizontal scroll container ── */
+  .ws-scroll {
+    flex: 1;
+    min-height: 0;
+    display: block;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    scroll-snap-type: x mandatory;
+  }
+
+  .ws-inner {
+    display: grid;
+    grid-template-columns: 320px 440px 320px;
+    grid-template-areas: "sb mn pv";
+    width: 1080px;
+    min-width: 1080px;
+    height: 100%;
+  }
+
+  #sb, #mn, #pv {
     position: relative;
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: var(--sp-lg) var(--sp-lg) var(--sp-2xl);
-    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
     scroll-snap-align: start;
+    scroll-snap-stop: always;
   }
 
-  #pv {
-    position: relative;              /* override base position: sticky */
-    height: 100%;
-    max-height: none;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: var(--sp-lg) var(--sp-lg) var(--sp-lg) var(--sp-md);
-    box-sizing: border-box;
-    scroll-snap-align: start;
-  }
-
-  /* ── Step list glass card: fill remaining sidebar height ── */
   #sb > .glass {
     flex: 1 1 0;
-    max-height: none;        /* remove calc(100vh - 520px) cap */
+    max-height: none;
     overflow-y: auto;
-    min-height: 80px;
   }
 
-  /* ── iOS input: prevent auto-zoom on focus (requires ≥ 16px) ── */
-  input[type="text"],
-  input[type="email"],
-  input[type="number"],
-  input,
-  select,
-  textarea {
+  /* Prevent iOS auto-zoom on input focus */
+  input, select, textarea {
     font-size: 16px !important;
   }
-
-  /* ── Buttons: touch-friendly tap targets ── */
-  .btn { min-height: 44px; }
-
-  /* ── Modals: full-width on mobile ── */
-  .cg-modal-inner, .modal-box {
-    width: 90vw !important;
-    max-width: 440px !important;
-    box-sizing: border-box;
-  }
-
 }
-/* END @media (max-width: 900px) — REVISE7g horizontal workspace */
+/* ===== END REVISE7h MOBILE ===================================== */
+
 </style>
 </head>
 <body>
@@ -1602,7 +1583,7 @@ html[lang="en"] .save-pill {
     <div class="brand">
       <div class="brand-gem">♪</div>
       <span class="brand-name">propri · Rights QA Journal</span>
-      <span class="brand-ver">v3.5.0 REVISE7g · 2026-05-29 · Local-First</span>
+      <span class="brand-ver">v3.5.0 REVISE7h · 2026-05-29 · Local-First</span>
       <button class="btn-return-mode" id="btn-return" onclick="returnToLanding()">← 返回模式選擇</button>
       <button id="btn-lang" class="btn-lang-toggle" onclick="toggleLang()">EN</button>
     </div>
@@ -1614,6 +1595,7 @@ html[lang="en"] .save-pill {
     <div class="steps-row" id="steps-row"></div>
   </div>
 
+  <div class="ws-scroll" id="wsScroll"><div class="ws-inner">
   <!-- SIDEBAR -->
   <div id="sb">
 
@@ -2103,6 +2085,8 @@ html[lang="en"] .save-pill {
     </div>
   </div>
 
+    </div><!-- /ws-inner -->
+  </div><!-- /ws-scroll -->
 </div><!-- /app -->
 
 <script>
@@ -3378,9 +3362,7 @@ function rebuildChips(){
 ════════════════════════════════════════════ */
 
 /* Demo whitelist — only these exact codes are valid */
-/* Redemption codes are configured in private builds only.
-   Do not commit live redemption codes to a public repository. */
-const DEMO_CODES = {};
+const DEMO_CODES = {} /* redemption codes removed — configure privately before deployment */;
 
 /* Portaly purchase page (placeholder) */
 const PORTALY_URL = 'https://portaly.cc/kaola';
@@ -3520,7 +3502,7 @@ function _updateRedeemLang(){
   };
   Object.entries(map).forEach(([id,txt])=>{ const el=document.getElementById(id); if(el) el.textContent=txt; });
   const inp = document.getElementById('rdm-input');
-  if(inp) inp.placeholder = isEn ? 'Enter redemption code' : '輸入兌換碼';
+  if(inp) inp.placeholder = isEn ? 'e.g. XXXX-XXXX-0' : '例如 XXXX-XXXX-0';
 }
 
 function submitRedeem(){
@@ -3623,36 +3605,28 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-/* ── REVISE7g: Auto-scroll #app to center column on mobile load ── */
+// ── REVISE7h: auto-scroll ws-scroll container to center column on load ──
 (function() {
   function scrollToCenter() {
     if (window.innerWidth <= 900) {
-      var app = document.getElementById('app');
-      if (app) {
-        /* Left sidebar is 320px → scroll app 320px to show center panel */
-        app.scrollLeft = 320;
+      var ws = document.getElementById('wsScroll');
+      if (ws) {
+        requestAnimationFrame(function() {
+          ws.scrollLeft = 320;
+        });
       }
     }
   }
-  /* Run after layout is painted */
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      requestAnimationFrame(scrollToCenter);
-    });
+    document.addEventListener('DOMContentLoaded', scrollToCenter);
   } else {
-    requestAnimationFrame(scrollToCenter);
+    scrollToCenter();
   }
-  /* Re-center if viewport widens to desktop then back to mobile */
+  // Re-run on resize in case DevTools viewport toggle
   window.addEventListener('resize', function() {
-    if (window.innerWidth <= 900) {
-      requestAnimationFrame(scrollToCenter);
-    } else {
-      var app = document.getElementById('app');
-      if (app) app.scrollLeft = 0;
-    }
+    if (window.innerWidth <= 900) scrollToCenter();
   });
 })();
-
 </script>
 
   <!-- v3.5.0 Redeem Code Modal -->
@@ -3660,7 +3634,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="cg-panel">
       <div class="cg-panel-title" id="rdm-title">兌換點數碼</div>
       <div class="cg-panel-sub" id="rdm-sub">輸入您的兌換碼，即可加入匯出點數。</div>
-      <input class="cg-input" id="rdm-input" type="text" placeholder="輸入兌換碼"
+      <input class="cg-input" id="rdm-input" type="text" placeholder="例如 XXXX-XXXX-0"
              autocomplete="off" spellcheck="false"
              oninput="document.getElementById('rdm-input').classList.remove('invalid','valid');document.getElementById('rdm-msg').textContent='';document.getElementById('rdm-msg').className='cg-msg';"
              onkeydown="if(event.key==='Enter')submitRedeem()"/>

@@ -1,6 +1,6 @@
 # AI Music Proof-of-Rights Generator
 
-**Version:** v3.5.0 CreditGate PortalyMVP — REVISE7g
+**Version:** v3.5.0 CreditGate PortalyMVP — REVISE7h
 **Date:** 2026-05-29
 **Status:** ✅ Desktop QA Passed · ⚠️ Mobile Visual QA Pending (real device)
 
@@ -14,16 +14,23 @@ For Vercel: deploy this folder as-is. `index.html` at root is served automatical
 
 ---
 
-## Mobile Layout (REVISE7g — Horizontal Workspace)
+## Mobile Layout (REVISE7h — Horizontal Workspace, iOS-Safe)
 
-This version uses a **horizontal swipe workspace** on mobile (≤ 900px):
+This version uses a **dedicated `.ws-scroll` wrapper** as the horizontal scroll container on mobile (≤ 900px).
 
+**Why REVISE7h (vs REVISE7g):**
+REVISE7g used `#app` as the scroll container and set `html, body { overflow: hidden }` to prevent page scroll.
+On iPhone Safari, `overflow: hidden` on `html` or `body` locks ALL touch-based scroll including descendants — making the workspace completely unswipeable.
+
+**REVISE7h fix:**
+- New `<div class="ws-scroll" id="wsScroll">` wrapper encloses the three columns
+- `html` and `body` are **NOT locked** — only `overflow-x: hidden` (x-axis clip only)
+- `.ws-scroll` owns the horizontal scroll: `overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y`
 - Three columns preserved at fixed widths: **Left 320px · Center 440px · Right 320px**
-- `#app` is the horizontal scroll container — users swipe left/right between panels
-- On load, JS auto-scrolls to the **center (form) column** (`app.scrollLeft = 320`)
+- On load, JS auto-scrolls to the **center (form) column** (`wsScroll.scrollLeft = 320`)
 - `scroll-snap-type: x mandatory` — swipe snaps cleanly to each column
 - Each column scrolls independently in the vertical direction
-- Desktop layout (> 900px): three-column grid unchanged
+- Desktop layout (> 900px): three-column grid unchanged via `.ws-inner`
 
 ---
 

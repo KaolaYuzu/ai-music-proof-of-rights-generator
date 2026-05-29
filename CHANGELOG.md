@@ -1,17 +1,20 @@
 # CHANGELOG
 
-## v3.5.0 REVISE7g — 2026-05-29
+## v3.5.0 REVISE7h — 2026-05-29
 
-### Added: Mobile Horizontal Workspace (`@media max-width: 900px`)
+### Root Cause Fix: iOS Safari Mobile Scroll
 
-- **Layout strategy:** `#app` becomes horizontal scroll container on mobile; three columns preserved at 320px + 440px + 320px = 1080px total
-- `scroll-snap-type: x mandatory` — swipe snaps to column boundaries
-- `-webkit-overflow-scrolling: touch` — iOS momentum scroll
-- JS auto-scroll: `app.scrollLeft = 320` on load → center (form) column shown by default
-- `#sb`, `#pv`: `position:relative; height:100%; overflow-y:auto` — each panel scrolls independently
-- `#sb > .glass`: `flex:1; max-height:none` — step list fills sidebar height without fixed cap
-- `input/select/textarea`: `font-size:16px` — prevents iOS auto-zoom on focus
-- Desktop (> 900px): unchanged
+**Problem (REVISE7g):** `html, body { overflow: hidden }` was used to prevent page scroll while the horizontal workspace was active. On iPhone Safari, setting `overflow: hidden` on `html` or `body` blocks ALL touch-scroll events including inside descendant scroll containers — making the three-column workspace completely unswipeable on real devices.
+
+**Fix:** Replaced with a dedicated `.ws-scroll` wrapper as the horizontal scroll container:
+
+- `<div class="ws-scroll" id="wsScroll"><div class="ws-inner">` wraps `#sb`, `#mn`, `#pv`
+- `html` and `body`: only `overflow-x: hidden` (x-axis clip, does NOT block touch events)
+- `.ws-scroll`: `overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y`
+- `scroll-snap-type: x mandatory` on `.ws-scroll` — snaps to column boundaries
+- `scroll-snap-align: start; scroll-snap-stop: always` on each column
+- JS auto-scrolls `wsScroll.scrollLeft = 320` on load → shows center (form) column
+- Desktop: `#app` grid uses `"hd"/"ws"` areas; `.ws-inner` holds `330px 1fr 330px` columns
 
 ### Unchanged from REVISE7e
 
@@ -25,6 +28,11 @@
 - propri companion PNG assets
 
 ---
+
+## v3.5.0 REVISE7g — 2026-05-29 (Rejected — iOS scroll lock)
+
+- Horizontal workspace using `#app overflow-x: auto` + `html,body { overflow:hidden }`
+- Passed code QA but failed on real iPhone Safari: html/body overflow:hidden blocks all touch scroll
 
 ## v3.5.0 REVISE7f — 2026-05-29 (Rejected — full single-column)
 
