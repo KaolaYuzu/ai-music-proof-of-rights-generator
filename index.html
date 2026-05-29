@@ -1,0 +1,3571 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>propri · AI Music Proof-of-Rights Generator</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%237A5CFF'/%3E%3Ccircle cx='16' cy='16' r='13' fill='%2318153A'/%3E%3Ctext x='16' y='21' text-anchor='middle' font-size='14' font-family='serif' fill='%23A78BFA'%3E%E2%99%AA%3C/text%3E%3C/svg%3E"/>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   DESIGN TOKENS  — v3.4 Cinematic UI Patch
+   Governance: propri_asset_governance / typography_system /
+               cinematic_spacing_system
+═══════════════════════════════════════════════════════════ */
+:root {
+  /* Colour world */
+  --ink:        #0A0C20;
+  --space:      #11102A;
+  --deep:       #18153A;
+  --violet:     #7A5CFF;
+  --lavender:   #A78BFA;
+  --glow:       #DDBBFF;
+  --lime:       #C8FFB0;
+  --mist:       #F0EEFF;
+  --mist-dim:   rgba(240,238,255,.60);
+  --border:     rgba(167,139,250,.20);
+  --border-hi:  rgba(167,139,250,.40);
+  --glass:      rgba(255,255,255,.048);
+  --glass-hi:   rgba(255,255,255,.082);
+
+  /* Typography — v3.4 Readability Upgrade */
+  --t-body:     18px;     /* creator-facing body text */
+  --t-helper:   18px;     /* helper text: 18px minimum */
+  --t-label:    24px;     /* form labels: 24px */
+  --t-label-sm: 13px;     /* structural chrome only */
+  --t-card:     22px;
+  --t-section:  30px;
+  --t-hero:     58px;
+
+  /* Line height */
+  --lh-body:    1.88;     /* increased for readability */
+  --lh-tight:   1.30;
+
+  /* Spacing — cinematic breathing */
+  --sp-xs:      8px;
+  --sp-sm:      14px;
+  --sp-md:      24px;
+  --sp-lg:      36px;
+  --sp-xl:      52px;
+  --sp-2xl:     72px;
+
+  /* Radius */
+  --r:          22px;
+  --r-sm:       14px;
+  --r-xs:       8px;
+
+  --font: -apple-system, 'Segoe UI', 'PingFang TC', 'Noto Sans TC', sans-serif;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: var(--t-body); scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background: var(--ink);
+  color: var(--mist);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: var(--lh-body);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ATMOSPHERE LAYERS
+═══════════════════════════════════════════════════════════ */
+#atm-base {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 95% 75% at 10%  0%,  rgba(122,92,255,.22) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 55% at 88% 90%,  rgba(167,139,250,.14) 0%, transparent 52%),
+    radial-gradient(ellipse 45% 40% at 50% 48%,  rgba(180,120,255,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 30% 25% at 72% 18%,  rgba(200,255,176,.05) 0%, transparent 55%),
+    linear-gradient(162deg, #0A0C20 0%, #11102A 48%, #080A1C 100%);
+}
+#atm-nebula {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 50% 30% at 18% 82%, rgba(122,92,255,.08) 0%, transparent 68%),
+    radial-gradient(ellipse 38% 22% at 80% 12%, rgba(200,255,176,.05) 0%, transparent 62%);
+  animation: nebulaDrift 20s ease-in-out infinite alternate;
+}
+@keyframes nebulaDrift {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(24px, -18px) scale(1.05); }
+}
+#star-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .65; }
+
+/* floating dust */
+.dust-p {
+  position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+  animation: dustRise linear infinite;
+}
+@keyframes dustRise {
+  0%   { transform: translateY(105vh) translateX(0)     scale(.5); opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: .9; }
+  100% { transform: translateY(-60px) translateX(var(--dx, 18px)) scale(1.15); opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   APP SHELL
+═══════════════════════════════════════════════════════════ */
+#app {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 330px 1fr 330px;
+  grid-template-areas:
+    "hd  hd  hd"
+    "sb  mn  pv";
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HEADER / PROGRESS NAV
+═══════════════════════════════════════════════════════════ */
+#hd {
+  grid-area: hd;
+  padding: var(--sp-lg) var(--sp-xl) 0;
+  background: linear-gradient(180deg, rgba(10,12,32,.96) 0%, transparent 100%);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.brand {
+  display: flex; align-items: center; gap: var(--sp-sm);
+  margin-bottom: var(--sp-md);
+}
+.brand-gem {
+  width: 38px; height: 38px; border-radius: 11px;
+  background: linear-gradient(135deg, var(--violet), var(--lavender));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 0 20px rgba(122,92,255,.55), 0 0 40px rgba(122,92,255,.2);
+}
+.brand-name {
+  font-size: 13px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--lavender);
+}
+.brand-ver {
+  margin-left: auto; font-size: 11px;
+  color: rgba(255,255,255,.22); letter-spacing: .05em;
+}
+
+/* Step progress bar */
+.steps-row {
+  display: flex; align-items: center;
+  padding-bottom: var(--sp-xl);
+}
+.stp { display: flex; align-items: center; flex: 1; position: relative; }
+.stp-dot {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; z-index: 2;
+  border: 1.5px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.03);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,.42); /* REVISE7b */
+  cursor: pointer;
+  transition: all .4s var(--ease);
+}
+.stp-dot.active {
+  border-color: var(--violet);
+  background: linear-gradient(135deg, var(--violet), var(--lavender));
+  color: #fff;
+  box-shadow: 0 0 22px rgba(122,92,255,.7), 0 0 48px rgba(122,92,255,.25);
+}
+.stp-dot.done {
+  border-color: rgba(167,139,250,.45);
+  background: rgba(122,92,255,.22);
+  color: var(--lavender);
+}
+.stp-label {
+  position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+  font-size: 12px; white-space: nowrap;
+  color: rgba(255,255,255,.65); pointer-events: none; /* REVISE7c: higher contrast */
+  transition: color .3s;
+}
+.stp-dot.active ~ .stp-label { color: var(--lavender); }
+.stp-line {
+  flex: 1; height: 1.5px;
+  background: rgba(255,255,255,.08);
+  transition: background .5s;
+}
+.stp-line.done {
+  background: linear-gradient(90deg, var(--violet), var(--lavender));
+  box-shadow: 0 0 6px rgba(122,92,255,.4);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLASS PANEL  (shared mixin-like rule)
+═══════════════════════════════════════════════════════════ */
+.glass {
+  background: linear-gradient(155deg, rgba(122,92,255,.08) 0%, rgba(255,255,255,.028) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.04) inset,
+    0 24px 64px rgba(0,0,0,.55),
+    0 0 48px rgba(122,92,255,.07);
+  position: relative; overflow: hidden;
+}
+.glass::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167,139,250,.35), transparent);
+  pointer-events: none;
+}
+.glass-deep {
+  background: linear-gradient(155deg, rgba(122,92,255,.12) 0%, rgba(255,255,255,.035) 100%);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--r);
+  backdrop-filter: blur(36px); -webkit-backdrop-filter: blur(36px);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.06) inset,
+    0 32px 80px rgba(0,0,0,.65),
+    0 0 60px rgba(122,92,255,.10);
+  position: relative; overflow: hidden;
+}
+.glass-deep::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167,139,250,.5), transparent);
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LEFT SIDEBAR — propri companion
+═══════════════════════════════════════════════════════════ */
+#sb {
+  grid-area: sb;
+  padding: var(--sp-lg) var(--sp-md) 120px var(--sp-xl); /* REVISE7c: 120px bottom clearance */
+  display: flex; flex-direction: column; gap: var(--sp-md);
+  position: sticky; top: 0;
+  height: 100vh; max-height: 100vh;
+  overflow-y: auto; overflow-x: hidden;
+  min-height: 0; box-sizing: border-box;
+  align-self: start;
+  scrollbar-width: thin; scrollbar-color: rgba(167,139,250,.25) transparent;
+}
+
+/* companion card */
+.companion-card {
+  padding: var(--sp-xl) var(--sp-md) var(--sp-md);
+  display: flex; flex-direction: column; align-items: center; gap: var(--sp-md);
+}
+.companion-card::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 120px;
+  background: linear-gradient(0deg, rgba(122,92,255,.08) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* propri stage */
+.propri-stage {
+  position: relative; width: 175px; height: 200px;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+
+/* magic circle platform */
+.propri-orbit {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 155px; height: 155px; pointer-events: none;
+}
+.propri-orbit svg { width: 100%; height: 100%; animation: orbitSpin 14s linear infinite; }
+@keyframes orbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.propri-orbit-inner {
+  position: absolute; inset: 18px;
+  animation: orbitRev 9s linear infinite;
+}
+@keyframes orbitRev { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+
+/* propri glow aura */
+.propri-aura {
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  width: 130px; height: 130px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(200,255,176,.20) 0%, transparent 68%);
+  animation: auraBreath 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes auraBreath {
+  0%, 100% { transform: translateX(-50%) scale(.85); opacity: .55; }
+  50%       { transform: translateX(-50%) scale(1.2);  opacity: 1;   }
+}
+
+/* propri image — GOVERNANCE: PNG only, CSS motion only */
+.propri-img-wrap {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  width: 140px; z-index: 3;
+  filter: drop-shadow(0 6px 20px rgba(200,255,176,.28))
+          drop-shadow(0 0 48px rgba(122,92,255,.38));
+  transition: filter .5s var(--ease);
+}
+.propri-img-wrap img {
+  width: 100%; display: none;
+  transform-origin: bottom center;
+}
+.propri-img-wrap img.visible { display: block; }
+
+/* State: idle — propri_main floats */
+.propri-state-idle    .propri-img-wrap { animation: propriFloat 4.8s ease-in-out infinite; }
+/* State: focus — propri_focus nods gently */
+.propri-state-focus   .propri-img-wrap { animation: propriFocus 2.8s ease-in-out infinite; }
+/* State: sleep — dim, slight tilt */
+.propri-state-sleep   .propri-img-wrap {
+  animation: propriSleep 7s ease-in-out infinite;
+  filter: drop-shadow(0 4px 12px rgba(122,92,255,.18)) brightness(.7) saturate(.6);
+}
+/* State: celebrate — bounce */
+.propri-state-celebrate .propri-img-wrap { animation: propriCeleb .55s ease-in-out 4; }
+
+@keyframes propriFloat {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%       { transform: translateX(-50%) translateY(-12px); }
+}
+@keyframes propriFocus {
+  0%, 100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+  40%       { transform: translateX(-50%) translateY(-5px) rotate(-3deg); }
+  70%       { transform: translateX(-50%) translateY(-7px) rotate(2deg); }
+}
+@keyframes propriSleep {
+  0%, 100% { transform: translateX(-50%) translateY(0) rotate(-5deg); }
+  50%       { transform: translateX(-50%) translateY(-4px) rotate(5deg); }
+}
+@keyframes propriCeleb {
+  0%   { transform: translateX(-50%) translateY(0) scale(1); }
+  45%  { transform: translateX(-50%) translateY(-18px) scale(1.07); }
+  100% { transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* zzz particles */
+.zzz-float {
+  display: none;
+  position: absolute; top: 14px; right: 8px; z-index: 5;
+  font-size: 14px; letter-spacing: 3px; color: var(--lavender);
+  animation: zzzDrift 3.2s ease-in-out infinite;
+}
+@keyframes zzzDrift {
+  0%   { opacity: 0; transform: translate(0, 0) scale(.8); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(16px, -36px) scale(1.2); }
+}
+.propri-state-sleep .zzz-float { display: block; }
+
+/* sparkle burst */
+.sparkle-burst {
+  position: absolute; inset: 0; pointer-events: none; z-index: 10;
+  display: none;
+}
+.sparkle-burst.pop { display: block; }
+.sparkle-burst span {
+  position: absolute; font-size: 14px;
+  animation: sparkPop .85s ease forwards;
+}
+@keyframes sparkPop {
+  0%   { opacity: 0; transform: scale(.3); }
+  38%  { opacity: 1; transform: scale(1.5); }
+  100% { opacity: 0; transform: scale(1) translateY(-28px); }
+}
+
+/* companion message */
+.c-msg {
+  background: rgba(122,92,255,.13);
+  border: 1px solid rgba(122,92,255,.28);
+  border-radius: 16px;
+  padding: 16px 20px;
+  font-size: var(--t-helper);
+  line-height: 1.55;
+  color: var(--glow);
+  text-align: center;
+  width: 100%;
+  min-height: 68px;
+  transition: all .45s var(--ease);
+  position: relative; z-index: 1;
+}
+
+/* progress mini-list */
+.prog-list {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: var(--sp-md) var(--sp-sm);
+}
+.prog-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 12px;
+  min-height: 44px; min-width: 0;
+  font-size: var(--t-helper);
+  color: rgba(255,255,255,.38);
+  cursor: pointer; transition: all .2s;
+}
+.prog-item span {
+  min-width: 0;
+  display: block;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.38;
+}
+.prog-item:hover   { background: rgba(255,255,255,.055); }
+.prog-item.done    { color: var(--lavender); }
+.prog-item.current { color: var(--mist); background: rgba(122,92,255,.16); }
+.prog-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.18); flex-shrink: 0; }
+.prog-item.done    .prog-dot { background: var(--lavender); }
+.prog-item.current .prog-dot { background: var(--violet); box-shadow: 0 0 8px var(--violet); }
+
+/* local save pill */
+.save-pill {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; color: rgba(255,255,255,.72);
+  padding: 10px 18px; border-radius: 40px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.16);
+  align-self: center; letter-spacing: .02em;
+  font-weight: 500;
+  max-width: 100%;
+  justify-content: center;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+}
+.save-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--lime); box-shadow: 0 0 8px var(--lime);
+  animation: savePulse 2.6s ease-in-out infinite;
+}
+
+/* completion quality bar */
+.cq-bar-wrap {
+  height: 6px; border-radius: 4px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden; margin: 10px 0 8px;
+}
+.cq-bar {
+  height: 100%; border-radius: 4px;
+  transition: width .5s var(--ease);
+  background: linear-gradient(90deg, var(--violet), var(--lavender));
+}
+.cq-label {
+  font-size: 15px; font-weight: 700;
+}
+.cq-hint {
+  font-size: 14px; color: rgba(255,255,255,.55); line-height: 1.55; margin-top: 6px;
+}
+.cq-basic    { color: rgba(255,189,89,.85); }
+.cq-suggest  { color: #A78BFA; }
+.cq-high     { color: #48c78e; }
+
+/* return-to-landing button */
+.btn-return-mode {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(167,139,250,.30);
+  border-radius: 30px;
+  padding: 10px 26px; /* REVISE7c: larger hit area */
+  font-size: 15px; color: rgba(255,255,255,.85); /* REVISE7c: more visible */
+  font-family: var(--font); cursor: pointer;
+  transition: all .2s; letter-spacing: .02em;
+  white-space: nowrap;
+}
+.btn-return-mode:hover {
+  border-color: var(--lavender);
+  color: var(--lavender);
+  background: rgba(167,139,250,.08);
+}
+/* language toggle button */
+.btn-lang-toggle {
+  margin-left: var(--sp-sm);
+  background: rgba(122,92,255,.18);
+  border: 1px solid rgba(167,139,250,.38);
+  border-radius: 30px;
+  padding: 8px 20px; /* REVISE7c */
+  font-size: 14px; font-weight: 700; /* REVISE7c: more readable */
+  color: var(--lavender);
+  font-family: var(--font); cursor: pointer;
+  letter-spacing: .08em;
+  transition: all .2s; white-space: nowrap;
+}
+.btn-lang-toggle:hover {
+  background: rgba(122,92,255,.32);
+  border-color: var(--violet);
+  color: var(--glow);
+}
+@keyframes savePulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+/* ═══════════════════════════════════════════════════════════
+   CENTER — JOURNAL STEPS
+═══════════════════════════════════════════════════════════ */
+#mn {
+  grid-area: mn;
+  padding: var(--sp-lg) var(--sp-xl) var(--sp-2xl);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+
+/* step panels */
+.step-panel { display: none; flex-direction: column; gap: 0; }
+.step-panel.active {
+  display: flex;
+  animation: panelReveal .55s var(--ease);
+}
+@keyframes panelReveal {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* step heading block */
+.step-head { margin-bottom: var(--sp-xl); }
+.step-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+  color: var(--violet);
+  background: rgba(122,92,255,.12);
+  border: 1px solid rgba(122,92,255,.28);
+  border-radius: 30px; padding: 4px 14px;
+  margin-bottom: var(--sp-sm);
+}
+.step-eyebrow .n {
+  width: 19px; height: 19px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--violet), var(--lavender));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: #fff; font-weight: 800;
+}
+.step-title {
+  font-size: var(--t-section);
+  font-weight: 800;
+  color: var(--mist);
+  line-height: var(--lh-tight);
+  letter-spacing: -.015em;
+  margin-bottom: 6px;
+}
+.step-en {
+  font-size: var(--t-helper);
+  color: rgba(255,255,255,.28);
+  font-style: italic; letter-spacing: .05em;
+  margin-bottom: var(--sp-sm);
+}
+.step-tone {
+  display: inline-block;
+  font-size: var(--t-body);
+  color: var(--lavender);
+  font-style: italic;
+  line-height: 1.5;
+  border-left: 2.5px solid rgba(167,139,250,.42);
+  padding: 8px var(--sp-md);
+  background: rgba(122,92,255,.06);
+  border-radius: 0 var(--r-xs) var(--r-xs) 0;
+}
+
+/* FIELDS */
+.fields { display: flex; flex-direction: column; gap: var(--sp-md); margin-top: var(--sp-lg); }
+.f2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-md); }
+
+.field { display: flex; flex-direction: column; gap: var(--sp-xs); }
+.field label {
+  font-size: var(--t-label);
+  font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: rgba(255,255,255,.42);
+}
+.req { color: var(--violet); }
+
+input, select, textarea {
+  background: rgba(255,255,255,.055);
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: var(--r-sm);
+  color: var(--mist);
+  font-family: var(--font);
+  font-size: var(--t-body);
+  padding: 14px 18px;
+  outline: none; width: 100%;
+  transition: border-color .25s, box-shadow .25s, background .25s;
+  line-height: var(--lh-body);
+}
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(122,92,255,.65);
+  background: rgba(122,92,255,.08);
+  box-shadow: 0 0 0 3.5px rgba(122,92,255,.16);
+}
+input::placeholder, textarea::placeholder { color: rgba(255,255,255,.22); }
+select option { background: #11102A; }
+textarea { resize: vertical; min-height: 100px; }
+
+/* section divider */
+.sec-div {
+  font-size: var(--t-label); font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: rgba(167,139,250,.5);
+  padding-top: var(--sp-xs);
+}
+
+/* checkbox group */
+.checks { display: flex; flex-direction: column; gap: 10px; }
+.ck {
+  display: flex; align-items: flex-start; gap: var(--sp-sm);
+  padding: 14px 18px;
+  background: rgba(255,255,255,.032);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--r-sm);
+  cursor: pointer; transition: all .2s;
+}
+.ck:hover { background: rgba(122,92,255,.09); border-color: rgba(122,92,255,.25); }
+.ck input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none;
+  width: 19px; height: 19px; border-radius: 5px; flex-shrink: 0; margin-top: 2px;
+  border: 2px solid rgba(255,255,255,.22); background: rgba(255,255,255,.04);
+  cursor: pointer; transition: all .2s;
+}
+.ck input[type="checkbox"]:checked {
+  background: var(--violet); border-color: var(--violet);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5l3.5 3.5L11 1' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: center; background-size: 11px;
+}
+.ck-text { display: flex; flex-direction: column; gap: 2px; }
+.ck-label { font-size: var(--t-body); font-weight: 500; color: var(--mist); }
+.ck-hint  { font-size: var(--t-helper); color: rgba(255,255,255,.32); }
+
+/* file metadata card */
+.file-card {
+  background: rgba(255,255,255,.032);
+  border: 1px dashed rgba(255,255,255,.14);
+  border-radius: var(--r-sm);
+  padding: 18px 20px;
+  display: flex; flex-direction: column; gap: var(--sp-sm);
+}
+.file-card-lbl {
+  font-size: var(--t-label); font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: rgba(255,255,255,.38);
+  display: flex; align-items: center; gap: 8px;
+}
+.file-card-lbl::before { content: '◻'; color: var(--lavender); font-size: 14px; }
+
+/* gentle notice */
+.notice {
+  display: none; align-items: flex-start; gap: 10px;
+  background: rgba(122,92,255,.09);
+  border: 1px solid rgba(122,92,255,.25);
+  border-radius: var(--r-sm);
+  padding: 14px 18px;
+  font-size: var(--t-helper);
+  color: var(--lavender);
+  margin-top: var(--sp-xs);
+  line-height: 1.6;
+}
+.notice.show { display: flex; }
+.notice-ico { font-size: 16px; flex-shrink: 0; line-height: 1.4; }
+
+/* readiness chips */
+.r-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--t-helper); font-weight: 700; letter-spacing: .05em;
+  padding: 6px 16px; border-radius: 30px;
+}
+.r-chip.ready    { background: rgba(72,199,142,.15); color: #48c78e; border: 1px solid rgba(72,199,142,.3); }
+.r-chip.review   { background: rgba(255,189,89,.14);  color: #ffbd59; border: 1px solid rgba(255,189,89,.3); }
+.r-chip.missing  { background: rgba(220,100,100,.14); color: #f08080; border: 1px solid rgba(220,100,100,.3); }
+.r-chip.highrisk { background: rgba(220,50,50,.2);    color: #ff6b6b; border: 1px solid rgba(220,50,50,.35); }
+
+/* step nav buttons */
+.step-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: var(--sp-xl);
+  padding-top: var(--sp-lg);
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+/* REVISE7b: Save draft nav button — same height as Back/Continue */
+.btn-save-draft-nav {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 13px 28px; border-radius: 50px;
+  font-family: var(--font); font-size: var(--t-body); font-weight: 600;
+  cursor: pointer; letter-spacing: .01em; transition: all .2s;
+  background: rgba(255,255,255,.055);
+  color: rgba(255,255,255,.70);
+  border: 1px solid rgba(255,255,255,.18);
+  min-width: 130px;
+}
+.btn-save-draft-nav:hover {
+  background: rgba(255,255,255,.12);
+  color: rgba(255,255,255,.88);
+  border-color: rgba(255,255,255,.30);
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 13px 28px; border-radius: 50px;
+  font-family: var(--font); font-size: var(--t-body); font-weight: 600;
+  cursor: pointer; border: none; outline: none;
+  transition: all .35s var(--ease); letter-spacing: .01em;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--violet), var(--lavender));
+  color: #fff;
+  box-shadow: 0 4px 24px rgba(122,92,255,.45);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(122,92,255,.62);
+}
+.btn-ghost {
+  background: rgba(255,255,255,.065);
+  color: rgba(255,255,255,.55);
+  border: 1px solid rgba(255,255,255,.12);
+}
+.btn-ghost:hover { background: rgba(255,255,255,.11); color: var(--mist); }
+.btn:disabled { opacity: .3; cursor: not-allowed; transform: none !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   RIGHT PREVIEW PANEL
+═══════════════════════════════════════════════════════════ */
+#pv {
+  grid-area: pv;
+  padding: var(--sp-lg) var(--sp-xl) var(--sp-lg) var(--sp-sm);
+  /* scroll fix: align-self start + max-height keeps it within viewport */
+  align-self: start;
+  position: sticky; top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* custom scrollbar — thin, unobtrusive */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(167,139,250,.25) transparent;
+  display: flex; flex-direction: column; gap: var(--sp-md);
+  box-sizing: border-box;
+}
+#pv::-webkit-scrollbar { width: 4px; }
+#pv::-webkit-scrollbar-track { background: transparent; }
+#pv::-webkit-scrollbar-thumb { background: rgba(167,139,250,.25); border-radius: 4px; }
+.pv-card { min-width: 0; }  /* prevent grid blowout */
+.pv-inner { padding: var(--sp-md) var(--sp-md); overflow: hidden; }
+.pv-title {
+  font-size: 11px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+  color: rgba(255,255,255,.58); margin-bottom: var(--sp-sm);
+}
+.rl { display: flex; flex-direction: column; gap: 9px; }
+.rl-row { display: flex; align-items: flex-start; gap: 9px; font-size: var(--t-helper); color: rgba(255,255,255,.75); word-break: break-word; overflow-wrap: anywhere; }
+.rl-row.ok   .ri { color: #48c78e; }
+.rl-row.warn .ri { color: #ffbd59; }
+.rl-row.miss .ri { color: rgba(255,255,255,.38); }
+.ri { font-size: 15px; flex-shrink: 0; transition: color .4s; }
+
+.ov-pill {
+  text-align: center; padding: 13px 16px; border-radius: var(--r-sm);
+  font-size: var(--t-helper); font-weight: 700; letter-spacing: .04em;
+  transition: all .5s;
+  word-break: break-word; overflow-wrap: anywhere;
+}
+.mini-doc {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--r-sm);
+  padding: 14px 16px;
+  font-size: var(--t-helper); color: rgba(255,255,255,.72);
+  line-height: 1.75;
+  word-break: break-word; overflow-wrap: anywhere;
+  min-width: 0;
+}
+.mini-doc strong { color: rgba(255,255,255,.90); }
+.ex-btn {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border-radius: 12px;
+  background: rgba(255,255,255,.042); border: 1px solid rgba(255,255,255,.09);
+  color: rgba(255,255,255,.78); font-family: var(--font); font-size: var(--t-helper);
+  cursor: pointer; transition: all .2s; margin-bottom: 7px;
+}
+.ex-btn:last-child { margin-bottom: 0; }
+.ex-btn:hover { background: rgba(122,92,255,.18); border-color: rgba(122,92,255,.4); color: var(--mist); }
+
+/* ═══════════════════════════════════════════════════════════
+   WELCOME / LANDING
+═══════════════════════════════════════════════════════════ */
+#welcome {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  overflow-y: auto; overflow-x: hidden; /* REVISE7a: allow scroll on small screens */
+  padding-bottom: 40px;
+  background:
+    radial-gradient(ellipse 85% 70% at 50% 50%, rgba(122,92,255,.22) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 18% 22%, rgba(200,255,176,.08) 0%, transparent 56%),
+    radial-gradient(ellipse 45% 38% at 82% 78%, rgba(167,139,250,.10) 0%, transparent 58%),
+    linear-gradient(162deg, #0A0C20 0%, #11102A 58%, #080A1C 100%);
+  transition: opacity .75s var(--ease);
+}
+#welcome.out { opacity: 0; pointer-events: none; }
+#wparts { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+/* magic orbit on landing */
+.hero-orbit-wrap {
+  position: relative;
+  width: 320px; height: 360px;
+  display: flex; align-items: flex-end; justify-content: center;
+  margin-bottom: var(--sp-xl);
+  flex-shrink: 0;
+}
+.hero-orbit {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 300px; height: 300px; pointer-events: none;
+}
+.hero-orbit svg { width: 100%; height: 100%; animation: heroSpin 18s linear infinite; }
+@keyframes heroSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.hero-orbit-inner {
+  position: absolute; inset: 32px;
+  animation: heroSpinRev 12s linear infinite;
+}
+@keyframes heroSpinRev { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+.hero-glow-pool {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  width: 220px; height: 60px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(122,92,255,.40) 0%, transparent 70%);
+  animation: glowPool 4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes glowPool {
+  0%, 100% { transform: translateX(-50%) scaleX(.9); opacity: .6; }
+  50%       { transform: translateX(-50%) scaleX(1.2); opacity: 1; }
+}
+
+/* hero propri image — GOVERNANCE: img tag only */
+.hero-propri-img {
+  position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%);
+  width: 200px; z-index: 4;
+  animation: heroFloat 5.5s ease-in-out infinite;
+  filter:
+    drop-shadow(0 10px 28px rgba(200,255,176,.30))
+    drop-shadow(0 0 60px rgba(122,92,255,.45));
+}
+@keyframes heroFloat {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%       { transform: translateX(-50%) translateY(-18px); }
+}
+
+/* hero text */
+.hero-wordmark {
+  font-size: 62px; font-weight: 900; letter-spacing: -.025em;
+  background: linear-gradient(135deg, #fff 0%, var(--lavender) 45%, var(--glow) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: center; margin-bottom: 8px;
+  line-height: 1;
+}
+.hero-sub {
+  font-size: 17px; color: var(--lavender); text-align: center;
+  margin-bottom: 8px; letter-spacing: .02em; font-weight: 500;
+}
+.hero-tagline {
+  font-size: 15px; color: rgba(255,255,255,.38); text-align: center;
+  letter-spacing: .04em; margin-bottom: var(--sp-xl);
+  line-height: 1.55;
+  max-width: 420px;
+}
+.btn-summon {
+  background: linear-gradient(135deg, var(--violet), var(--lavender));
+  color: #fff; border: none; border-radius: 60px;
+  padding: 18px 52px; font-size: 17px; font-weight: 700;
+  cursor: pointer; font-family: var(--font); letter-spacing: .03em;
+  box-shadow: 0 6px 36px rgba(122,92,255,.55), 0 0 70px rgba(122,92,255,.18);
+  transition: all .4s var(--ease);
+}
+.btn-summon:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 48px rgba(122,92,255,.72), 0 0 80px rgba(122,92,255,.28);
+}
+.hero-micro {
+  margin-top: var(--sp-md);
+  font-size: 12px; color: rgba(255,255,255,.25);
+  text-align: center; letter-spacing: .05em;
+}
+
+/* mode picker on landing */
+#mode-pick {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--sp-md); width: 100%; max-width: 480px;
+  margin-bottom: var(--sp-md);
+}
+.mode-q {
+  font-size: 17px; color: rgba(255,255,255,.70);
+  text-align: center; letter-spacing: .02em;
+}
+.mode-btns {
+  display: flex; gap: 14px; width: 100%;
+}
+.btn-mode {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 20px 16px;
+  background: rgba(255,255,255,.052);
+  border: 1px solid rgba(167,139,250,.22);
+  border-radius: var(--r);
+  color: rgba(255,255,255,.72);
+  font-family: var(--font); font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: all .3s var(--ease);
+  line-height: 1.4; text-align: center;
+}
+.btn-mode:hover {
+  background: rgba(122,92,255,.18);
+  border-color: rgba(122,92,255,.55);
+  color: var(--mist);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(122,92,255,.28);
+}
+.btn-mode.selected {
+  background: rgba(122,92,255,.28);
+  border-color: rgba(167,139,250,.60);
+  color: var(--mist);
+}
+.btn-mode-icon { font-size: 26px; }
+/* batch placeholder */
+#batch-ph {
+  display: none;
+  flex-direction: column; align-items: center; gap: var(--sp-sm);
+  max-width: 420px; text-align: center;
+  padding: var(--sp-lg) var(--sp-xl);
+  background: rgba(255,255,255,.038);
+  border: 1px solid rgba(167,139,250,.18);
+  border-radius: var(--r);
+  margin-bottom: var(--sp-md);
+}
+#batch-ph.show { display: flex; }
+.batch-ph-title { font-size: 19px; font-weight: 700; color: var(--lavender); }
+.batch-ph-body  { font-size: 15px; color: rgba(255,255,255,.60); line-height: 1.65; }
+.batch-ph-back  {
+  margin-top: var(--sp-sm);
+  background: none; border: 1px solid rgba(167,139,250,.35);
+  border-radius: 40px; padding: 10px 28px;
+  color: rgba(255,255,255,.55); font-family: var(--font); font-size: 14px;
+  cursor: pointer; transition: all .2s;
+}
+.batch-ph-back:hover { border-color: var(--lavender); color: var(--lavender); }
+
+/* ═══════════════════════════════════════════════════════════
+   DOCUMENT OVERLAY — Premium Archive Feel
+═══════════════════════════════════════════════════════════ */
+#doc-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(6,7,20,.95);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  overflow-y: auto; padding: 52px 24px;
+}
+#doc-overlay.show { display: flex; flex-direction: column; align-items: center; }
+
+.doc-bar {
+  width: 100%; max-width: 760px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 26px;
+}
+.doc-bar-title { font-size: 14px; color: var(--lavender); font-weight: 600; letter-spacing: .03em; }
+.doc-bar-actions { display: flex; gap: 9px; }
+
+/* THE DOCUMENT — premium archival paper */
+#proof-doc {
+  background: #F8F7FF;
+  color: #18162E;
+  width: 100%; max-width: 760px;
+  border-radius: 18px;
+  padding: 68px 76px 60px;
+  font-family: 'Georgia', 'Times New Roman', Georgia, serif;
+  font-size: 14px; line-height: 1.9;
+  box-shadow:
+    0 40px 100px rgba(0,0,0,.75),
+    0 0 0 1px rgba(122,92,255,.15);
+  position: relative; overflow: hidden;
+}
+/* top accent band */
+#proof-doc::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 6px;
+  background: linear-gradient(90deg, #5a3dcc, #7A5CFF, #A78BFA, #DDBBFF, #A78BFA, #7A5CFF, #5a3dcc);
+}
+/* subtle line texture */
+#proof-doc::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg, transparent, transparent 27px, rgba(0,0,0,.016) 28px
+  );
+  pointer-events: none;
+}
+
+.doc-brandline {
+  font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+  color: #7A5CFF; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 12px; position: relative; z-index: 1;
+}
+.doc-brandline::after { content: ''; flex: 1; height: 1px; background: rgba(122,92,255,.22); }
+.doc-maintitle {
+  font-size: 26px; font-weight: 700; color: #13102E;
+  margin-bottom: 5px; line-height: 1.2;
+  position: relative; z-index: 1;
+}
+.doc-subtitle { font-size: 15px; color: #666; position: relative; z-index: 1; }
+.doc-meta {
+  display: flex; gap: 28px; margin-top: 12px;
+  font-size: 12px; color: #999; font-style: italic;
+  padding-bottom: 26px; border-bottom: 2.5px solid #EBE8FF;
+  margin-bottom: 32px; position: relative; z-index: 1;
+}
+.doc-section { margin-bottom: 30px; position: relative; z-index: 1; }
+.doc-section h3 {
+  font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  color: #7A5CFF; margin-bottom: 12px;
+  padding-bottom: 6px; border-bottom: 1px solid #EBE8FF;
+}
+.doc-row { display: flex; gap: 10px; margin-bottom: 7px; font-size: 13.5px; page-break-inside: avoid; }
+.dk { color: #888; min-width: 155px; flex-shrink: 0; }
+.dv { color: #18162E; font-weight: 500; }
+.doc-disclaimer {
+  margin-top: 36px; padding-top: 20px;
+  border-top: 1px solid #EBE8FF;
+  font-size: 11.5px; color: #aaa; font-style: italic; line-height: 1.7;
+  position: relative; z-index: 1;
+}
+.doc-footer {
+  margin-top: 16px; font-size: 11px; color: #ccc;
+  text-align: center; letter-spacing: .07em;
+  position: relative; z-index: 1;
+}
+
+/* step 7 embedded preview */
+.embed-preview {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: var(--r);
+  padding: var(--sp-lg) var(--sp-xl);
+  margin-bottom: var(--sp-lg);
+  max-height: 400px; overflow-y: auto;
+}
+.embed-preview h4 {
+  font-size: 11px; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--lavender); margin-bottom: var(--sp-sm);
+}
+
+/* readiness result */
+#read-result {
+  display: none;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: var(--r-sm);
+  padding: 20px 22px; margin-top: var(--sp-md);
+}
+
+/* step 8 final card */
+.final-card {
+  background: linear-gradient(135deg, rgba(122,92,255,.11), rgba(167,139,250,.06));
+  border: 1px solid rgba(122,92,255,.26);
+  border-radius: var(--r);
+  padding: var(--sp-xl) var(--sp-lg);
+  text-align: center; margin-bottom: var(--sp-lg);
+  position: relative; overflow: hidden;
+}
+.final-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167,139,250,.5), transparent);
+}
+.final-glyph { font-size: 44px; margin-bottom: var(--sp-sm); display: block; }
+.final-name { font-size: var(--t-card); font-weight: 700; color: var(--mist); margin-bottom: 5px; }
+.final-fn   { font-size: var(--t-helper); color: rgba(255,255,255,.62); }
+
+/* toast */
+.toast {
+  position: fixed; bottom: 36px; left: 50%; transform: translateX(-50%);
+  background: rgba(17,16,42,.97);
+  border: 1px solid rgba(122,92,255,.45);
+  border-radius: 50px; padding: 12px 26px;
+  font-size: var(--t-helper); color: var(--lavender);
+  box-shadow: 0 10px 32px rgba(0,0,0,.55);
+  z-index: 300; opacity: 0; transition: opacity .3s; pointer-events: none;
+}
+.toast.in { opacity: 1; }
+
+/* print */
+@media print {
+  body { background: #fff !important; }
+  #app, #welcome { display: none !important; }
+  #doc-overlay { display: block !important; background: #fff !important; padding: 0; }
+  .doc-bar, .doc-bar-actions { display: none !important; }
+  #proof-doc { box-shadow: none; border-radius: 0; max-width: 100%; }
+}
+/* scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(122,92,255,.48); }
+
+/* ══════════════════════════════════════════════════════
+   V3.4 TYPOGRAPHY + CONTRAST + FILE PICKER
+══════════════════════════════════════════════════════ */
+
+/* ── Structural chrome keeps its size ─────────────── */
+.brand-name    { font-size: 14px; }
+.brand-ver     { font-size: 13px; color: rgba(255,255,255,.60); }
+.step-eyebrow  { font-size: 12px; }
+.stp-dot       { font-size: 12px; }
+.stp-label     { font-size: 12px; color: rgba(255,255,255,.65); }
+.save-pill     { font-size: 15px; }
+.pv-title      { font-size: 13px; }
+.sec-div       { font-size: 15px; }
+.step-en       { font-size: 16px; color: rgba(255,255,255,.45); font-style: italic; }
+.doc-brandline { font-size: 10px; }
+
+/* ── Content typography ───────────────────────────── */
+.step-tone {
+  font-size: 20px;
+  line-height: 1.65;
+  color: var(--lavender);
+}
+.field label {
+  font-size: 24px;
+  color: rgba(255,255,255,.82);
+  letter-spacing: .01em;
+  text-transform: none;
+  font-weight: 700;
+}
+.file-card-lbl {
+  font-size: 22px;
+  color: rgba(255,255,255,.82);
+  letter-spacing: .01em;
+  text-transform: none;
+  font-weight: 700;
+}
+.ck-label { font-size: 18px; font-weight: 500; color: rgba(255,255,255,.88); }
+.ck-hint  { font-size: 16px; color: rgba(255,255,255,.55); line-height: 1.55; }
+.ck       { padding: 16px 20px; gap: 16px; }
+.prog-item { font-size: 18px; color: rgba(255,255,255,.55); overflow-wrap: break-word; word-break: break-word; }
+
+/* ── Placeholder contrast (not ultra-thin) ─────────── */
+input::placeholder, textarea::placeholder {
+  color: rgba(255,255,255,.42);
+  font-size: 18px;
+}
+select option { color: var(--mist); }
+
+/* ── Section & field spacing ──────────────────────── */
+.fields     { gap: 30px; }
+.f2         { gap: 28px; }
+.step-head  { margin-bottom: 52px; }
+
+/* ── File card evidence UX ────────────────────────── */
+.file-card {
+  padding: 24px 26px;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(122,92,255,.07) 0%, rgba(255,255,255,.022) 100%);
+  border: 1px solid rgba(167,139,250,.22);
+}
+.file-card-helper {
+  font-size: 17px;
+  color: rgba(255,255,255,.55);
+  line-height: 1.65;
+  margin-bottom: 4px;
+}
+
+/* ── File picker component ────────────────────────── */
+.fp-row {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin: 6px 0 10px;
+}
+.btn-pick {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px; border-radius: 40px;
+  background: rgba(122,92,255,.16);
+  border: 1px solid rgba(122,92,255,.40);
+  color: var(--lavender);
+  font-family: var(--font); font-size: 16px; font-weight: 600;
+  cursor: pointer; transition: all .25s var(--ease);
+  white-space: nowrap;
+}
+.btn-pick:hover {
+  background: rgba(122,92,255,.30);
+  border-color: rgba(122,92,255,.70);
+  color: var(--glow);
+  transform: translateY(-1px);
+}
+.fp-accept {
+  font-size: 13px; color: rgba(255,255,255,.35);
+  letter-spacing: .04em; line-height: 1.4;
+}
+.fp-chip {
+  display: none;
+  align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 14px 20px;
+  background: rgba(122,92,255,.10);
+  border: 1px solid rgba(122,92,255,.32);
+  border-radius: var(--r-sm);
+  margin-bottom: 8px;
+}
+.fp-chip.show { display: flex; }
+.fp-name {
+  font-size: 17px; color: var(--mist); font-weight: 500;
+  max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fp-sep  { color: rgba(255,255,255,.28); font-size: 14px; }
+.fp-size { font-size: 15px; color: rgba(255,255,255,.52); }
+.fp-local-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--lime);
+  background: rgba(200,255,176,.10);
+  border: 1px solid rgba(200,255,176,.28);
+  border-radius: 20px; padding: 3px 11px;
+  margin-left: auto; flex-shrink: 0;
+}
+.fp-local-badge::before { content: '●'; font-size: 8px; margin-right: 3px; }
+.fp-rm {
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13);
+  color: rgba(255,255,255,.40); font-size: 13px; cursor: pointer;
+  padding: 4px 10px; border-radius: 6px; transition: all .2s;
+  flex-shrink: 0; font-family: var(--font);
+}
+.fp-rm:hover { background: rgba(220,70,70,.22); border-color: rgba(220,70,70,.42); color: #ff8888; }
+.fp-manual {
+  font-size: 17px !important;
+  margin-top: 6px;
+  color: rgba(255,255,255,.70) !important;
+}
+.fp-manual::placeholder { font-size: 16px !important; color: rgba(255,255,255,.38) !important; }
+
+/* print stays clean */
+@media print { .fp-chip, .fp-row, .btn-pick { display: none !important; } }
+
+/* ══════════════════════════════════════════════════════
+   v3.4.7 SIDEBAR HOTFIX — EN mode text overflow fix
+══════════════════════════════════════════════════════ */
+
+/* Sidebar: ensure content never clips horizontally */
+#sb { overflow-x: hidden; }
+#sb .glass { min-width: 0; overflow: hidden; }
+
+/* REVISE7e: step list internal scroll — mascot stays fixed, only steps scroll */
+#sb > .glass {
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: calc(100vh - 520px);
+  min-height: 80px;
+  flex-shrink: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(167,139,250,.25) transparent;
+}
+#sb > .glass::-webkit-scrollbar { width: 4px; }
+#sb > .glass::-webkit-scrollbar-track { background: transparent; }
+#sb > .glass::-webkit-scrollbar-thumb { background: rgba(167,139,250,.25); border-radius: 4px; }
+
+/* EN mode: tighten prog-item text to avoid wrap where possible */
+html[lang="en"] .prog-item {
+  font-size: 16.5px;
+  letter-spacing: 0;
+  gap: 10px;
+}
+html[lang="en"] .prog-item span {
+  line-height: 1.38;
+}
+
+/* EN mode: companion message — calmer line-breaks */
+html[lang="en"] .c-msg {
+  font-size: 16.5px;
+  line-height: 1.48;
+  letter-spacing: 0;
+}
+
+/* EN mode: save pill slightly smaller to stay one line */
+html[lang="en"] .save-pill {
+  font-size: 14.5px;
+  letter-spacing: 0;
+}
+
+
+/* ═══════════════════════════════════════════════════
+   v3.5.0 CreditGate REVISE3 — Inline status line (bottom of #mn)
+═══════════════════════════════════════════════════ */
+.credit-status-row {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgba(255,255,255,.64);
+  padding: 14px 0 6px;
+  max-width: 540px;
+}
+.credit-status-row .cs-label { color: rgba(255,255,255,.52); }
+.credit-status-row .value    { color: rgba(255,255,255,.86); font-weight: 600; }
+.credit-status-row .value.used { color: rgba(255,255,255,.34); font-weight: 400; }
+.credit-status-row .cs-sep  { color: rgba(255,255,255,.25); margin: 0 6px; }
+.credit-status-row button,
+.credit-status-row .credit-link {
+  background: none; border: none; padding: 0;
+  font-size: 14.5px; color: rgba(255,255,255,.72);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(255,255,255,.22);
+  text-underline-offset: 3px;
+  transition: color .18s, text-decoration-color .18s;
+  font-family: inherit;
+}
+.credit-status-row button:hover,
+.credit-status-row .credit-link:hover {
+  color: #b99cff;
+  text-decoration-color: rgba(185,156,255,.45);
+}
+
+/* ═══════════════════════════════════════════════════
+   v3.5.0 CreditGate — Modal shared base
+═══════════════════════════════════════════════════ */
+.cg-overlay {
+  position: fixed; inset: 0; z-index: 9100;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s;
+}
+.cg-overlay.show { opacity: 1; pointer-events: all; }
+.cg-panel {
+  background: #16131f;
+  border: 1px solid rgba(122,92,255,.28);
+  border-radius: 18px; padding: 32px 28px 28px;
+  width: 390px; max-width: 92vw;
+  box-shadow: 0 24px 64px rgba(0,0,0,.72);
+}
+.cg-panel-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.cg-panel-sub { font-size: 13px; color: rgba(255,255,255,.45); margin-bottom: 22px; line-height: 1.5; }
+.cg-input {
+  width: 100%; box-sizing: border-box;
+  padding: 12px 14px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px; color: #fff;
+  font-size: 14px; font-family: monospace; letter-spacing: .05em;
+  outline: none; transition: border-color .2s;
+}
+.cg-input:focus { border-color: rgba(122,92,255,.55); }
+.cg-input.invalid { border-color: rgba(255,80,80,.6); }
+.cg-input.valid   { border-color: rgba(80,230,120,.5); }
+.cg-msg { font-size: 12px; margin-top: 8px; min-height: 18px; line-height: 1.45; }
+.cg-msg.err { color: rgba(255,100,100,.9); }
+.cg-msg.ok  { color: rgba(100,230,140,.9); }
+.cg-actions { display: flex; gap: 10px; margin-top: 20px; }
+.cg-actions .btn { flex: 1; justify-content: center; }
+
+/* ═══════════════════════════════════════════════════
+   v3.5.0 CreditGate — Export Gate pricing cards
+═══════════════════════════════════════════════════ */
+.gate-pack-row { display: flex; gap: 10px; margin: 16px 0; }
+.gate-pack {
+  flex: 1; background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px; padding: 14px 12px; text-align: center;
+}
+.gate-pack.highlight {
+  background: rgba(122,92,255,.1);
+  border-color: rgba(122,92,255,.35);
+}
+.gate-pack-name { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: rgba(255,255,255,.4); margin-bottom: 6px; }
+.gate-pack-price { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.gate-pack-credits { font-size: 12px; color: rgba(255,255,255,.5); }
+.gate-pack.highlight .gate-pack-credits { color: var(--lavender); }
+.gate-divider { text-align: center; font-size: 12px; color: rgba(255,255,255,.3); margin: 12px 0; }
+</style>
+</head>
+<body>
+
+<!-- ── ATMOSPHERE ──────────────────────────────── -->
+<div id="atm-base"></div>
+<div id="atm-nebula"></div>
+<canvas id="star-canvas"></canvas>
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════
+     WELCOME / LANDING
+═══════════════════════════════════════════════ -->
+<div id="welcome">
+  <div id="wparts"></div>
+
+  <!-- hero propri orbit + image -->
+  <div class="hero-orbit-wrap">
+    <!-- rotating ring -->
+    <div class="hero-orbit">
+      <svg viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="150" cy="150" r="138" stroke="url(#hrg1)" stroke-width="1.2" stroke-dasharray="7 9" opacity=".72"/>
+        <circle cx="150" cy="12"  r="5.5" fill="#7A5CFF" opacity=".9"/>
+        <circle cx="288" cy="150" r="4"   fill="#A78BFA" opacity=".8"/>
+        <circle cx="150" cy="288" r="5.5" fill="#7A5CFF" opacity=".9"/>
+        <circle cx="12"  cy="150" r="4"   fill="#A78BFA" opacity=".8"/>
+        <text x="138" y="10"  font-size="11" fill="rgba(167,139,250,.65)" font-family="serif">π</text>
+        <text x="284" y="156" font-size="11" fill="rgba(167,139,250,.55)" font-family="serif">♪</text>
+        <text x="138" y="296" font-size="11" fill="rgba(167,139,250,.65)" font-family="serif">✦</text>
+        <defs>
+          <linearGradient id="hrg1" x1="0" y1="0" x2="300" y2="300">
+            <stop offset="0%"   stop-color="#7A5CFF"/>
+            <stop offset="100%" stop-color="#A78BFA"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="hero-orbit-inner">
+        <svg viewBox="0 0 236 236" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <circle cx="118" cy="118" r="110" stroke="rgba(200,255,176,.25)" stroke-width=".9" stroke-dasharray="3 13"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="hero-glow-pool"></div>
+
+    <!-- GOVERNANCE: img tag, transparent cutout PNG, CSS handles glow/orbit -->
+    <img
+      class="hero-propri-img"
+      src="assets/propi/propri_main.png"
+      alt="propri — your AI music rights companion"
+    />
+  </div>
+
+  <div class="hero-wordmark" data-i18n="hero-wordmark">propi</div>
+  <div class="hero-sub" data-i18n="hero-sub">AI Music Proof-of-Rights Generator</div>
+  <div class="hero-tagline" id="hero-tagline">
+    整理發行前的 AI 音樂版權記錄。<br>
+    本工具協助你準備 Proof-of-Rights 資料，<br>
+    <span style="font-size:13px;opacity:.7;">不構成法律意見，也不保證平台接受。</span>
+  </div>
+
+  <!-- mode picker -->
+  <div id="mode-pick">
+    <div class="mode-q" data-i18n="mode-q">你想先整理哪一種作品？</div>
+    <div class="mode-btns">
+      <button class="btn-mode" id="mode-single" onclick="pickMode('single')">
+        <span class="btn-mode-icon">♪</span>
+        <span><span data-i18n="mode-single-label">單首作品</span><br><span style="font-weight:400;font-size:13px;opacity:.72;" data-i18n="mode-single-sub">Proof-of-Rights</span></span>
+      </button>
+      <button class="btn-mode btn-mode-disabled" id="mode-batch" onclick="pickMode('batch')" style="opacity:.45;cursor:default;position:relative;">
+        <span class="btn-mode-icon">⊞</span>
+        <span><span data-i18n="mode-batch-label">EP / Album</span><br><span style="font-weight:400;font-size:13px;opacity:.72;" data-i18n="mode-batch-sub">批次整理</span></span>
+        <span style="position:absolute;top:10px;right:12px;font-size:11px;font-weight:700;letter-spacing:.06em;background:rgba(167,139,250,.22);color:var(--lavender);border-radius:20px;padding:3px 9px;" id="next-ver-badge" data-i18n="next-ver-badge">下一版開放</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- REVISE7: Draft fork UI -->
+  <div id="mode-pick-draft" style="display:none;text-align:center;margin-top:48px;">
+    <div class="mode-q" id="mode-q-draft" data-i18n="mode-q-draft">發現本機有儲存的草稿</div>
+    <div class="mode-btns" style="margin-top:24px;gap:16px;flex-direction:column;align-items:center;">
+      <button class="btn-mode" style="width:260px;min-height:64px;" onclick="continueDraft()">
+        <span class="btn-mode-icon">↩</span>
+        <span><span id="mode-continue-draft-label" data-i18n="mode-continue-draft">繼續上次草稿</span></span>
+      </button>
+      <button class="btn-mode" style="width:260px;min-height:64px;opacity:0.7;" onclick="startNewProof()">
+        <span class="btn-mode-icon">＋</span>
+        <span><span id="mode-new-proof-label" data-i18n="mode-new-proof">建立新的 proof</span></span>
+      </button>
+    </div>
+  </div><!-- /mode-pick-draft -->
+
+  <!-- batch placeholder (shown when batch mode selected) -->
+  <div id="batch-ph">
+    <div class="batch-ph-title" data-i18n="batch-ph-title">⊞ EP / Album 批次整理</div>
+    <div class="batch-ph-body">
+      批次整理會牽涉 EP / Album 層級資料與多首歌曲匯出，將在 v4 開放。此版本請先使用單首作品模式。<br><br>
+      <span style="font-size:13px;opacity:.70;">每首歌曲請分別使用單首作品模式整理，逐一建立 Proof-of-Rights 記錄。</span>
+    </div>
+    <button class="batch-ph-back" data-i18n="batch-ph-back" onclick="resetMode()">← 使用單首作品模式</button>
+  </div>
+
+  <div class="hero-micro" data-i18n="hero-micro">Local-First · No Backend · No API · Your data stays here</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     DOCUMENT OVERLAY
+═══════════════════════════════════════════════ -->
+<div id="doc-overlay">
+  <div class="doc-bar">
+    <span class="doc-bar-title" id="doc-bar-title">✦ Proof-of-Rights 文件預覽</span>
+    <div class="doc-bar-actions">
+      <button class="btn btn-ghost" onclick="window.print()" id="doc-btn-print" style="font-size:13px;padding:9px 18px;">🖨 列印 / PDF</button>
+      <button class="btn btn-ghost" onclick="exportJSON()" id="doc-btn-json" style="font-size:13px;padding:9px 18px;">{ } JSON</button>
+      <button class="btn btn-ghost" onclick="copyText()" id="doc-btn-copy" style="font-size:13px;padding:9px 18px;">⎘ 複製</button>
+      <button class="btn btn-primary" onclick="closeDoc()" id="doc-btn-close" style="font-size:13px;padding:9px 20px;">✕ 關閉</button>
+    </div>
+  </div>
+  <div id="proof-doc">
+    <div class="doc-brandline">AI Music Proof-of-Rights Generator · Guided Rights QA Journal · v3.4.8</div>
+    <div class="doc-maintitle" id="d-title">Proof-of-Rights Document</div>
+    <div class="doc-subtitle"  id="d-sub">AI Music Creator Rights Record</div>
+    <div class="doc-meta">
+      <span><span id="doc-meta-generated">Generated: </span><span id="d-date"></span></span>
+      <span id="doc-meta-local">Local-First Archive</span>
+      <span id="doc-meta-legal">Not Legal Advice</span>
+    </div>
+    <div id="d-body"></div>
+    <div class="doc-disclaimer">
+      This document is a creator-side record for documentation and submission support. It is not legal advice, not copyright registration, not distributor approval, and does not guarantee platform acceptance. All information was entered by the creator and has not been independently verified.
+    </div>
+    <div class="doc-footer">propri · AI Music Proof-of-Rights Generator v3.4 · Local-First Archive · Powered by Kaola</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     APP
+═══════════════════════════════════════════════ -->
+<div id="app" style="opacity:0;transition:opacity .65s;">
+
+  <!-- HEADER -->
+  <div id="hd">
+    <div class="brand">
+      <div class="brand-gem">♪</div>
+      <span class="brand-name">propri · Rights QA Journal</span>
+      <span class="brand-ver">v3.5.0 REVISE7e · 2026-05-29 · Local-First</span>
+      <button class="btn-return-mode" id="btn-return" onclick="returnToLanding()">← 返回模式選擇</button>
+      <button id="btn-lang" class="btn-lang-toggle" onclick="toggleLang()">EN</button>
+    </div>
+    <!-- Fix #10: document purpose notice -->
+    <div style="display:flex;align-items:center;gap:9px;font-size:14px;color:rgba(255,255,255,.55);margin-bottom:var(--sp-sm);padding:9px 16px;background:rgba(255,255,255,.038);border:1px solid rgba(255,255,255,.10);border-radius:40px;width:fit-content;">
+      <span>ⓘ</span>
+      <span data-i18n="info-bar">此工具協助整理發行前 Proof-of-Rights 資料，不構成法律意見，也不保證平台接受。</span>
+    </div>
+    <div class="steps-row" id="steps-row"></div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div id="sb">
+
+    <!-- companion card -->
+    <div class="glass-deep companion-card" id="companionCard">
+      <div class="propri-stage propri-state-idle" id="propriStage">
+
+        <!-- orbit platform -->
+        <div class="propri-orbit">
+          <svg viewBox="0 0 155 155" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="77.5" cy="77.5" r="72" stroke="url(#og1)" stroke-width=".9" stroke-dasharray="5 8" opacity=".65"/>
+            <circle cx="77.5" cy="5.5"  r="3.5" fill="#7A5CFF" opacity=".8"/>
+            <circle cx="149.5" cy="77.5" r="2.8" fill="#A78BFA" opacity=".7"/>
+            <circle cx="77.5" cy="149.5" r="3.5" fill="#7A5CFF" opacity=".8"/>
+            <circle cx="5.5"  cy="77.5" r="2.8" fill="#A78BFA" opacity=".7"/>
+            <defs>
+              <linearGradient id="og1" x1="0" y1="0" x2="155" y2="155">
+                <stop offset="0%"   stop-color="#7A5CFF"/>
+                <stop offset="100%" stop-color="#A78BFA"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="propri-orbit-inner">
+            <svg viewBox="0 0 119 119" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+              <circle cx="59.5" cy="59.5" r="54" stroke="rgba(200,255,176,.25)" stroke-width=".7" stroke-dasharray="2 11"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- aura glow -->
+        <div class="propri-aura"></div>
+
+        <!-- GOVERNANCE: propri PNG images, CSS motion only -->
+        <div class="propri-img-wrap" id="propriImgWrap">
+          <img id="img-main"  src="assets/propi/propri_main.png"  alt="propri" class="visible"/>
+          <img id="img-focus" src="assets/propi/propri_focus.png" alt="propri focusing"/>
+          <img id="img-side"  src="assets/propi/propri_side.png"  alt="propri resting"/>
+        </div>
+
+        <!-- zzz -->
+        <div class="zzz-float" id="zzzEl">z z z</div>
+
+        <!-- sparkle -->
+        <div class="sparkle-burst" id="sparkBurst">
+          <span style="top:6%;left:14%;animation-delay:0s">✦</span>
+          <span style="top:20%;right:10%;animation-delay:.12s">✧</span>
+          <span style="bottom:28%;left:24%;animation-delay:.26s">⋆</span>
+          <span style="top:38%;right:20%;animation-delay:.40s">✦</span>
+        </div>
+      </div>
+
+      <div class="c-msg" id="c-msg">慢慢來，我會陪你<br>一步一步完成。</div>
+    </div>
+
+    <!-- progress list -->
+    <div class="glass">
+      <div class="prog-list" id="prog-list"></div>
+    </div>
+
+    <div class="save-pill" style="display:none;" aria-hidden="true">
+      <span class="save-dot"></span>
+      <span id="save-text">草稿已儲存在此裝置</span>
+    </div>
+
+  </div>
+
+  <!-- MAIN -->
+  <div id="mn">
+
+    <!-- ── STEP 1 ── -->
+    <div class="step-panel active" id="s1">
+      <div class="step-head">
+        <div class="step-eyebrow"><span class="n">1</span>Step 1 of 8</div>
+        <div class="step-title">作品身份</div>
+        <div class="step-en">Work Identity</div>
+        <div class="step-tone">先幫這首作品建立基本身份。</div>
+      </div>
+      <div class="fields">
+        <div class="f2">
+          <div class="field"><label><span data-i18n="l-trackTitle">曲名</span> <span class="req">*</span></label><input type="text" id="trackTitle" placeholder="e.g. Moonlight Protocol" data-k="trackTitle"/></div>
+          <div class="field"><label><span data-i18n="l-artistName">演出者</span> <span class="req">*</span></label><input type="text" id="artistName" placeholder="e.g. Kaola Yuzu" data-k="artistName"/></div>
+        </div>
+        <div class="f2">
+          <div class="field"><label><span data-i18n="l-releaseType">發行類型</span> <span class="req">*</span></label>
+            <select id="releaseType" data-k="releaseType"><option value="">選擇</option><option>Single</option><option>EP</option><option>Album</option><option>Remix</option><option>Instrumental</option><option>Cover</option></select></div>
+          <div class="field"><label><span data-i18n="l-versionName">版本名稱</span> <span class="req">*</span></label><input type="text" id="versionName" placeholder="e.g. Acoustic Mix" data-k="versionName"/></div>
+        </div>
+        <div class="f2">
+          <div class="field"><label><span data-i18n="l-language">語言</span> <span class="req">*</span></label>
+            <select id="language" data-k="language"><option value="">選擇</option><option>中文</option><option>English</option><option>日本語</option><option>Instrumental</option><option>其他</option></select></div>
+          <div class="field"><label><span data-i18n="l-genre">風格 / 情感</span> <span class="req">*</span></label><input type="text" id="genre" placeholder="e.g. Ambient / Melancholic" data-k="genre"/></div>
+        </div>
+        <div class="field">
+          <label><span data-i18n="l-releaseDate">預計發行日期</span> <span class="req">*</span></label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="releaseDate" data-k="releaseDate" placeholder="YYYY-MM-DD　例如：2026-05-28" maxlength="20" style="flex:1;"/>
+            <button type="button"
+              onclick="document.getElementById('releaseDate').value='尚未確定';document.getElementById('releaseDate').dispatchEvent(new Event('input'));"
+              style="white-space:nowrap;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.18);border-radius:8px;color:rgba(255,255,255,.65);font-size:13px;padding:8px 14px;cursor:pointer;font-family:inherit;flex-shrink:0;">
+              尚未確定
+            </button>
+          </div>
+          <span id="date-helper" style="font-size:var(--t-helper);color:rgba(255,255,255,.48);display:block;margin-top:6px;line-height:1.5;">例如：2026-05-28。若尚未確定，請點「尚未確定」按鈕或直接填入文字。</span>
+        </div>
+      </div>
+      <div class="notice" id="n1"><span class="notice-ico">○</span><span data-i18n="n1-text">曲名和演出者是必填欄位，文件才能正確建立。</span></div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" disabled data-i18n="btn-back-disabled">← 返回</button>
+        <button class="btn btn-primary" onclick="go(1,true)" data-i18n="btn-continue">繼續 →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 2 ── -->
+    <div class="step-panel" id="s2">
+      <div class="step-head">
+        <div class="step-eyebrow"><span class="n">2</span>Step 2 of 8</div>
+        <div class="step-title">創作故事</div>
+        <div class="step-en">Creation Story</div>
+        <div class="step-tone">這首歌是怎麼開始的？</div>
+      </div>
+      <div class="fields">
+        <div class="field">
+          <label><span data-i18n="l-creationMode">創作模式</span> <span class="req">*</span></label>
+          <select id="creationMode" data-k="creationMode">
+            <option value="">請選擇最符合的情境</option>
+            <option value="fully-human">完全人工創作 — 無 AI 工具參與</option>
+            <option value="ai-assist">人工為主 + AI 輔助修改 — AI 作為效率工具</option>
+            <option value="ai-draft-human-rework">AI 初稿 + 人工大幅修改 — 人工主導最終版本</option>
+            <option value="ai-collab">AI 與人工深度共同創作 — 兩者密切結合</option>
+            <option value="fully-ai">以 AI 工具為主協作 — 人工監督完成</option>
+          </select>
+          <span id="creationMode-helper" style="font-size:var(--t-helper);color:rgba(255,255,255,.32);display:block;margin-top:6px;line-height:1.55;">選擇最接近的情境——這會直接影響 Proof-of-Rights 文件中的創作聲明內容。若是混合情境，請選最主要的模式，再在下方詳細說明。</span>
+        </div>
+        <div class="field"><label data-i18n="l-inspiration">靈感 / 發想起源</label><textarea id="inspiration" placeholder="這首歌的想法是從哪裡來的？" data-k="inspiration"></textarea></div>
+        <div class="field"><label data-i18n="l-ideaDate">靈感開始的時間</label><input type="text" id="ideaDate" placeholder="e.g. 2025年底 / 某個失眠的夜晚" data-k="ideaDate"/></div>
+        <div class="field"><label data-i18n="l-production">製作過程中有什麼改變？</label><textarea id="production" placeholder="從最初想法到最終版本，中間發生了什麼？" data-k="production" style="min-height:80px"></textarea></div>
+        <div class="field"><label><span data-i18n="l-humanDecisions">人類創作決策記錄</span> <span class="req">*</span></label><textarea id="humanDecisions" placeholder="你做了哪些關鍵創作選擇？例如曲調走向、情感定位、歌詞核心概念..." data-k="humanDecisions"></textarea></div>
+        <div class="field"><label data-i18n="l-artDirection">情感或藝術方向備注</label><textarea id="artDirection" placeholder="這首作品想傳達的感受或主題" data-k="artDirection" style="min-height:80px"></textarea></div>
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="back(2)" data-i18n="btn-back">← 返回</button>
+        <button class="btn btn-primary" onclick="go(2,false)" data-i18n="btn-continue">繼續 →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 3 ── -->
+    <div class="step-panel" id="s3">
+      <div class="step-head">
+        <div class="step-eyebrow"><span class="n">3</span>Step 3 of 8</div>
+        <div class="step-title">AI 使用記錄</div>
+        <div class="step-en">AI Usage Record</div>
+        <div class="step-tone">我們把 AI 參與的部分說清楚，這樣之後發行時比較安心。</div>
+      </div>
+      <div class="fields">
+        <div class="field"><label data-i18n="l-aiTools">使用了哪些 AI 工具？</label><input type="text" id="aiTools" placeholder="e.g. Suno, Udio, ChatGPT, MusicGen..." data-k="aiTools"/></div>
+        <div class="field"><label data-i18n="l-aiParts">AI 用在哪些部分？</label><textarea id="aiParts" placeholder="請具體說明，例如：AI 生成初版旋律，人工修改了節奏和編曲..." data-k="aiParts"></textarea></div>
+        <div class="sec-div" data-i18n="s3-sec-div">AI 涉及的具體範疇</div>
+        <div class="checks">
+          <label class="ck"><input type="checkbox" id="aiLyrics"      data-k="aiLyrics"/><div class="ck-text"><span class="ck-label" data-i18n="ck-aiLyrics-label">歌詞 Lyrics</span><span class="ck-hint" data-i18n="ck-aiLyrics-hint">使用 AI 工具協助創作歌詞內容</span></div></label>
+          <label class="ck"><input type="checkbox" id="aiVocals"      data-k="aiVocals"/><div class="ck-text"><span class="ck-label" data-i18n="ck-aiVocals-label">人聲 / Vocals</span><span class="ck-hint" data-i18n="ck-aiVocals-hint">使用了 AI 合成人聲或聲音模型</span></div></label>
+          <label class="ck"><input type="checkbox" id="aiComposition" data-k="aiComposition"/><div class="ck-text"><span class="ck-label" data-i18n="ck-aiComposition-label">作曲 / Composition</span><span class="ck-hint" data-i18n="ck-aiComposition-hint">使用 AI 工具協助生成旋律、和弦或編曲</span></div></label>
+          <label class="ck"><input type="checkbox" id="aiArtwork"     data-k="aiArtwork"/><div class="ck-text"><span class="ck-label" data-i18n="ck-aiArtwork-label">封面圖 / Artwork</span><span class="ck-hint" data-i18n="ck-aiArtwork-hint">封面使用 AI 工具協作生成</span></div></label>
+        </div>
+        <div class="field"><label data-i18n="l-humanRevision">人工修改說明</label><textarea id="humanRevision" placeholder="使用 AI 工具協作後，你做了哪些調整或再創作？" data-k="humanRevision" style="min-height:80px"></textarea></div>
+      </div>
+      <div class="notice show" style="margin-top:var(--sp-xs);">
+        <span class="notice-ico">○</span>
+        <span data-i18n="s3-notice">清楚說明 AI 用途有助於日後與發行商溝通，也能保護你的創作記錄。</span>
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="back(3)" data-i18n="btn-back">← 返回</button>
+        <button class="btn btn-primary" onclick="go(3,false)" data-i18n="btn-continue">繼續 →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 4 ── -->
+    <div class="step-panel" id="s4">
+      <div class="step-head">
+        <div class="step-eyebrow"><span class="n">4</span>Step 4 of 8</div>
+        <div class="step-title">所有權與版權</div>
+        <div class="step-en">Ownership &amp; Rights</div>
+        <div class="step-tone">這一步是在確認作品的權利歸屬。</div>
+      </div>
+      <div class="fields">
+        <div class="f2">
+          <div class="field"><label><span data-i18n="l-masterOwner">母帶所有人</span> <span class="req">*</span></label><input type="text" id="masterOwner" placeholder="姓名或公司" data-k="masterOwner"/></div>
+          <div class="field"><label><span data-i18n="l-compositionOwner">曲目所有人</span> <span class="req">*</span></label><input type="text" id="compositionOwner" placeholder="姓名或公司" data-k="compositionOwner"/></div>
+        </div>
+        <div class="f2">
+          <div class="field"><label><span data-i18n="l-lyricist">作詞者</span> <span class="req">*</span></label><input type="text" id="lyricist" placeholder="姓名" data-k="lyricist"/></div>
+          <div class="field"><label><span data-i18n="l-composer">作曲者</span> <span class="req">*</span></label><input type="text" id="composer" placeholder="姓名" data-k="composer"/></div>
+        </div>
+        <div class="f2">
+          <div class="field"><label><span data-i18n="l-producer">製作人</span> <span class="req">*</span></label><input type="text" id="producer" placeholder="姓名" data-k="producer"/></div>
+          <div class="field"><label><span data-i18n="l-performer">演出者 / 主唱</span> <span class="req">*</span></label><input type="text" id="performer" placeholder="姓名" data-k="performer"/></div>
+        </div>
+        <div class="field"><label><span data-i18n="l-featured">特邀藝人（如有）</span> <span class="req">*</span></label><input type="text" id="featured" placeholder="如無特邀藝人，請填 None / 無 / N/A" data-k="featured"/></div>
+        <div class="field"><label><span data-i18n="l-splitNotes">版稅分配備注</span> <span class="req">*</span></label><textarea id="splitNotes" placeholder="e.g. 詞曲 70% / 製作 30%" data-k="splitNotes" style="min-height:70px"></textarea></div>
+        <div class="f2">
+          <div class="field"><label><span data-i18n="l-sampleUse">取樣使用</span> <span class="req">*</span></label>
+            <select id="sampleUse" data-k="sampleUse"><option value="">選擇</option><option value="none">無取樣</option><option value="cleared">有取樣，已清 sample</option><option value="uncleared">有取樣，未清 sample ⚠</option><option value="unknown">不確定</option></select>
+            <span id="sampleUse-helper" style="font-size:var(--t-helper);color:rgba(255,255,255,.55);display:block;margin-top:8px;line-height:1.65;">「取樣」是指你是否使用了既有聲音、旋律、錄音、人聲、節奏片段或其他作品的一部分，再放進這首作品中。不是所有 AI 音樂都會取樣；如果你只是用 AI 生成全新的旋律或聲音，通常可以選擇「無取樣」。</span>
+          </div>
+          <!-- Fix #4: artworkOwner needs-supplement notice trigger -->
+        <div class="field">
+            <label><span data-i18n="l-artworkOwner">封面圖版權</span> <span class="req">*</span></label>
+            <select id="artworkOwner" data-k="artworkOwner">
+              <option value="">選擇</option>
+              <option value="self">自行創作</option>
+              <option value="ai-self">使用 AI 工具協作生成</option>
+              <option value="licensed">授權使用（已取得授權）</option>
+              <option value="needs-supplement">需補件 / 暫不建議提交</option>
+            </select>
+            <span id="artworkOwner-helper" style="font-size:var(--t-helper);color:rgba(255,255,255,.32);display:block;margin-top:6px;line-height:1.55;">若來源尚不明確，請先確認授權後再提交。選擇「需補件」代表此項目仍待確認，文件將標注為未完整。</span>
+          </div>
+        </div>
+        <div class="field"><label data-i18n="l-agreementStatus">協議狀態</label>
+          <select id="agreementStatus" data-k="agreementStatus"><option value="">選擇</option><option value="all-signed">所有協議已簽署</option><option value="verbal">口頭協議</option><option value="pending">協議待簽</option><option value="na">不適用（個人作品）</option></select></div>
+      </div>
+      <!-- creator declaration — moved from AI Usage, converted to checkbox -->
+      <div class="checks" style="margin-top:var(--sp-md);padding:var(--sp-md);background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.18);border-radius:var(--r-sm);">
+        <div class="sec-div" style="margin-bottom:12px;" data-i18n="s4-creator-div">創作者聲明</div>
+        <label class="ck"><input type="checkbox" id="humanControlConfirm" data-k="humanControlConfirm"/><div class="ck-text"><span class="ck-label" data-i18n="ck-humanControlConfirm-label">最終版本的音樂創作決策由我本人完成</span><span class="ck-hint" data-i18n="ck-humanControlConfirm-hint">使用 AI 工具協作的部分已經過人工審核、修改與確認，最終作品反映了我的創作意圖。</span></div></label>
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="back(4)" data-i18n="btn-back">← 返回</button>
+        <button class="btn btn-primary" onclick="go(4,false)" data-i18n="btn-continue">繼續 →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 5 ── -->
+    <div class="step-panel" id="s5">
+      <div class="step-head">
+        <div class="step-eyebrow"><span class="n">5</span>Step 5 of 8</div>
+        <div class="step-title">發行前證明資料</div>
+        <div class="step-en">Pre-Release Evidence</div>
+        <div class="step-tone">發行前，先把能支撐這首作品的檔案記錄下來。這不是存檔——是確認「文件在哪、有沒有備妥」。</div>
+      </div>
+
+      <!-- local-only notice -->
+      <div class="notice show" style="margin-top:var(--sp-lg);">
+        <span class="notice-ico">ⓘ</span>
+        <span>
+          <span id="s5-local-notice"><b>本頁為本機紀錄。選擇檔案後只讀取檔名與大小，不讀取內容，不上傳，不傳送至任何伺服器。</b><br>所有資料僅保存在你的本機 localStorage。</span>
+        </span>
+      </div>
+
+      <!-- distributor reminder -->
+      <div class="notice show" style="margin-top:12px;border-color:rgba(255,189,89,.3);background:rgba(255,189,89,.07);">
+        <span class="notice-ico" style="color:#ffbd59;">⚠</span>
+        <span style="color:rgba(255,255,255,.65);">
+          <span id="s5-dist-notice"><b style="color:#ffbd59;">發行前請確認：</b>各發行商（DistroKid、TuneCore、CD Baby 等）對音檔格式、取樣率、位元深度、封面尺寸及大小均有不同要求，請至官網查閱最新規格。本工具不做壓縮或轉檔。<br><br><b style="color:#ffbd59;">檔案大小建議：</b>建議單一證明檔案控制在 8MB 以內，並在提交前確認發行商最新的檔案大小與格式限制。</span>
+        </span>
+      </div>
+
+      <div class="fields" style="margin-top:var(--sp-lg);">
+
+        <!-- 母帶音檔版本紀錄（參考記錄，不上傳音檔） -->
+        <div class="file-card">
+          <div class="file-card-lbl" data-i18n="fc-lbl-masterFile">母帶音檔版本紀錄</div>
+          <div class="file-card-helper" data-i18n="fc-hlp-masterFile">這裡不需要上傳音檔本身，只需記錄你準備提交給發行商的最終母帶版本，例如檔名、格式與保存位置。實際音檔請依發行商要求另行提交。</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;">
+            <input type="text" id="masterFile" data-k="masterFile" class="fp-manual" placeholder="母帶檔案名稱　e.g. final_master_v3.wav" style="display:block!important;"/>
+            <input type="text" id="masterFormat" data-k="masterFormat" class="fp-manual" placeholder="音檔格式　e.g. WAV / 44.1kHz / 24-bit"/>
+            <input type="text" id="masterFilePath" data-k="masterFilePath" class="fp-manual" placeholder="本機保存路徑 / 雲端保存位置　e.g. /Music/Releases/AlbumName/"/>
+            <input type="text" id="masterNotes" data-k="masterNotes" class="fp-manual" placeholder="備註　e.g. 最終版，已過 loudness check"/>
+          </div>
+        </div>
+
+        <!-- 封面圖 -->
+        <div class="file-card">
+          <div class="file-card-lbl" data-i18n="fc-lbl-artworkFile">封面圖</div>
+          <div class="file-card-helper" data-i18n="fc-hlp-artworkFile">記錄封面圖檔名，並備注版權來源（自行創作 / 使用 AI 工具協作 / 授權素材）。</div>
+          <div class="fp-row">
+            <input type="file" id="fi-artworkFile" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf" onchange="pickFile(this,'artworkFile')" style="display:none">
+            <button type="button" class="btn-pick" onclick="document.getElementById('fi-artworkFile').click()" data-i18n="btn-pick">⊕ 選擇檔案</button>
+            <span class="fp-accept">PNG · JPG · JPEG · PDF</span>
+          </div>
+          <div class="fp-chip" id="chip-artworkFile"></div>
+          <input type="text" id="artworkFile" data-k="artworkFile" class="fp-manual" placeholder="e.g. cover_art_v3.png（自行創作）"/>
+        </div>
+
+        <!-- 歌詞文件 -->
+        <div class="file-card">
+          <div class="file-card-lbl" data-i18n="fc-lbl-lyricFile">歌詞文件</div>
+          <div class="file-card-helper" data-i18n="fc-hlp-lyricFile">記錄最終版歌詞文件檔名與版本，確認與提交音檔同步。</div>
+          <div class="fp-row">
+            <input type="file" id="fi-lyricFile" accept=".txt,.docx,.doc,.pdf" onchange="pickFile(this,'lyricFile')" style="display:none">
+            <button type="button" class="btn-pick" onclick="document.getElementById('fi-lyricFile').click()" data-i18n="btn-pick">⊕ 選擇檔案</button>
+            <span class="fp-accept">TXT · DOCX · PDF</span>
+          </div>
+          <div class="fp-chip" id="chip-lyricFile"></div>
+          <input type="text" id="lyricFile" data-k="lyricFile" class="fp-manual" placeholder="e.g. lyrics_final_v2.txt"/>
+        </div>
+
+        <!-- 合作協議 -->
+        <div class="file-card">
+          <div class="file-card-lbl" data-i18n="fc-lbl-agreementFile">合作協議</div>
+          <div class="file-card-helper" data-i18n="fc-hlp-agreementFile">記錄授權書、委託協議或合作合約的檔名。尚未簽署請備注「待簽署」。</div>
+          <div class="fp-row">
+            <input type="file" id="fi-agreementFile" accept=".pdf,.docx,.doc,.txt,.jpg,.png" onchange="pickFile(this,'agreementFile')" style="display:none">
+            <button type="button" class="btn-pick" onclick="document.getElementById('fi-agreementFile').click()" data-i18n="btn-pick">⊕ 選擇檔案</button>
+            <span class="fp-accept">PDF · DOCX · JPG</span>
+          </div>
+          <div class="fp-chip" id="chip-agreementFile"></div>
+          <input type="text" id="agreementFile" data-k="agreementFile" class="fp-manual" placeholder="e.g. collab_agreement_signed.pdf（或「待簽署」）"/>
+        </div>
+
+        <!-- AI 生成記錄 -->
+        <div class="file-card">
+          <div class="file-card-lbl" data-i18n="fc-lbl-aiRecord">AI 生成記錄</div>
+          <div class="file-card-helper" data-i18n="fc-hlp-aiRecord">這是最重要的 AI 透明度證明。記錄 prompt 截圖、AI 工具匯出紀錄、生成頁面截圖等。</div>
+          <div class="fp-row">
+            <input type="file" id="fi-aiRecord" accept=".zip,.pdf,.png,.jpg,.jpeg,.txt,.docx" onchange="pickFile(this,'aiRecord')" style="display:none">
+            <button type="button" class="btn-pick" onclick="document.getElementById('fi-aiRecord').click()" data-i18n="btn-pick">⊕ 選擇檔案</button>
+            <span class="fp-accept">ZIP · PDF · PNG · DOCX</span>
+          </div>
+          <div class="fp-chip" id="chip-aiRecord"></div>
+          <input type="text" id="aiRecord" data-k="aiRecord" class="fp-manual" placeholder="e.g. suno_prompt_screenshots.zip"/>
+        </div>
+
+        <!-- 發行商提交截圖 -->
+        <div class="file-card">
+          <div class="file-card-lbl" data-i18n="fc-lbl-distScreenshot">發行商提交截圖</div>
+          <div class="file-card-helper" data-i18n="fc-hlp-distScreenshot">若已提交或規劃提交，記錄截圖檔名。尚未提交可填「待提交」或留空。</div>
+          <div class="fp-row">
+            <input type="file" id="fi-distScreenshot" accept=".png,.jpg,.jpeg,.pdf" onchange="pickFile(this,'distScreenshot')" style="display:none">
+            <button type="button" class="btn-pick" onclick="document.getElementById('fi-distScreenshot').click()" data-i18n="btn-pick">⊕ 選擇檔案</button>
+            <span class="fp-accept">PNG · JPG · PDF</span>
+          </div>
+          <div class="fp-chip" id="chip-distScreenshot"></div>
+          <input type="text" id="distScreenshot" data-k="distScreenshot" class="fp-manual" placeholder="e.g. distrokid_submit_2025-12.png"/>
+        </div>
+
+        <div class="field">
+          <label data-i18n="l-otherProof">其他說明或補充文件</label>
+          <textarea id="otherProof" placeholder="其他可支持本作品的文件名稱、存放位置或備注說明" data-k="otherProof" style="min-height:80px"></textarea>
+        </div>
+
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="back(5)" data-i18n="btn-back">← 返回</button>
+        <button class="btn btn-primary" onclick="go(5,false)" data-i18n="btn-continue">繼續 →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 6 ── -->
+    <div class="step-panel" id="s6">
+      <div class="step-head">
+        <div class="step-eyebrow"><span class="n">6</span>Step 6 of 8</div>
+        <div class="step-title">發行前準備</div>
+        <div class="step-en">Release Readiness</div>
+        <div class="step-tone">我們檢查一下發行前還缺什麼。</div>
+      </div>
+      <div class="fields">
+        <div class="field"><label data-i18n="l-distributor">發行平台</label><input type="text" id="distributor" placeholder="e.g. DistroKid / TuneCore / CD Baby" data-k="distributor"/></div>
+        <div class="f2">
+          <div class="field"><label data-i18n="l-isrcStatus">ISRC 狀態</label>
+            <select id="isrcStatus" data-k="isrcStatus"><option value="">選擇</option><option value="obtained">已取得</option><option value="pending">申請中</option><option value="na">待處理</option></select></div>
+          <div class="field"><label data-i18n="l-upcStatus">UPC 狀態</label>
+            <select id="upcStatus" data-k="upcStatus"><option value="">選擇</option><option value="obtained">已取得</option><option value="pending">申請中</option><option value="na">待處理</option></select></div>
+        </div>
+        <div class="sec-div" data-i18n="s6-checklist-div">發行前清單</div>
+        <div class="checks">
+          <label class="ck"><input type="checkbox" id="explicitOk"        data-k="explicitOk"/><div class="ck-text"><span class="ck-label" data-i18n="ck-explicitOk-label">限制級內容標示確認</span><span class="ck-hint" data-i18n="ck-explicitOk-hint">已確認是否需要 Explicit 標籤</span></div></label>
+          <label class="ck"><input type="checkbox" id="lyricsReady"       data-k="lyricsReady"/><div class="ck-text"><span class="ck-label" data-i18n="ck-lyricsReady-label">歌詞就緒</span><span class="ck-hint" data-i18n="ck-lyricsReady-hint">最終版本歌詞已確認</span></div></label>
+          <label class="ck"><input type="checkbox" id="coverReady"        data-k="coverReady"/><div class="ck-text"><span class="ck-label" data-i18n="ck-coverReady-label">封面圖就緒</span><span class="ck-hint" data-i18n="ck-coverReady-hint">符合發行規格</span></div></label>
+          <label class="ck"><input type="checkbox" id="aiDisclosureReady" data-k="aiDisclosureReady"/><div class="ck-text"><span class="ck-label" data-i18n="ck-aiDisclosureReady-label">AI 使用申報就緒</span><span class="ck-hint" data-i18n="ck-aiDisclosureReady-hint">了解發行平台的 AI 聲明要求</span></div></label>
+          <label class="ck"><input type="checkbox" id="rightsProofReady"  data-k="rightsProofReady"/><div class="ck-text"><span class="ck-label" data-i18n="ck-rightsProofReady-label">版權證明就緒</span><span class="ck-hint" data-i18n="ck-rightsProofReady-hint">版權文件已整理</span></div></label>
+        </div>
+        <div class="field"><label data-i18n="l-marketingNotes">行銷素材備注（選填）</label><textarea id="marketingNotes" placeholder="社群圖片、宣傳文案、預告片等素材狀態" data-k="marketingNotes" style="min-height:70px"></textarea></div>
+      </div>
+      <div id="read-result">
+        <div id="s6-readiness-label" style="font-size:12px;color:rgba(255,255,255,.38);margin-bottom:10px;text-transform:uppercase;letter-spacing:.07em;">發行整備評估</div>
+        <div id="r-chip"></div>
+        <div id="r-detail" style="font-size:var(--t-helper);color:rgba(255,255,255,.42);margin-top:10px;line-height:1.65;"></div>
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="back(6)" data-i18n="btn-back">← 返回</button>
+        <button class="btn btn-primary" id="btn-evalReady" onclick="evalReady()">評估整備狀態 →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 7 ── -->
+    <div class="step-panel" id="s7">
+      <div class="step-head">
+        <div class="step-eyebrow"><span class="n">7</span>Step 7 of 8</div>
+        <div class="step-title">預覽與確認</div>
+        <div class="step-en">Preview &amp; Review</div>
+        <div class="step-tone">文件草稿已就緒。請確認內容是否正確，有需要修改可以點左側步驟回頭調整，確認沒問題再前往匯出。</div>
+      </div>
+      <div class="embed-preview">
+        <h4 id="s7-preview-title">✦ Proof-of-Rights 文件摘要</h4>
+        <div id="doc-sum" style="font-size:var(--t-body);color:rgba(255,255,255,.58);line-height:1.85;"></div>
+      </div>
+      <!-- Fix #9: preview only — no primary download CTA here -->
+      <div style="display:flex;gap:var(--sp-sm);flex-wrap:wrap;margin-bottom:var(--sp-sm);">
+        <button class="btn btn-primary" id="btn-openDoc" onclick="openDoc()">查看完整文件預覽</button>
+        <button class="btn btn-ghost" id="btn-back7" onclick="back(7)">← 返回修改</button>
+      </div>
+      <div style="font-size:var(--t-helper);color:rgba(255,255,255,.28);margin-top:var(--sp-xs);line-height:1.6;">
+        <span id="s7-helper">◦ PDF 列印、JSON 下載、純文字複製請前往下一步「匯出文件」。</span>
+      </div>
+      <div class="step-nav">
+        <div></div>
+        <button class="btn btn-primary" id="btn-goExport" onclick="goTo(8)">前往匯出 →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 8 ── -->
+    <div class="step-panel" id="s8">
+      <div class="step-head">
+        <div class="step-eyebrow"><span class="n">8</span>Step 8 of 8</div>
+        <div class="step-title">匯出文件</div>
+        <div class="step-en">Export</div>
+        <div class="step-tone">完成了。這份文件可以列印、保存，或作為發行前的權利紀錄。</div>
+      </div>
+      <div class="final-card">
+        <span class="final-glyph">✦</span>
+        <div class="final-name" id="final-name">文件已就緒</div>
+        <div class="final-fn"   id="final-fn">AI_Music_Proof_of_Rights_[曲名]_[日期]</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
+        <button class="btn btn-primary" id="btn-openDocFull" onclick="gatedOpenDoc()" style="justify-content:center;">查看 / 列印完整文件</button>
+        <button class="btn btn-ghost"   id="btn-exportJSON" onclick="gatedExportJSON()" style="justify-content:center;">{ } 下載 JSON 存檔</button>
+        <button class="btn btn-ghost"   id="btn-copyText" onclick="gatedCopyText()" style="justify-content:center;">⎘ 複製純文字報告</button>
+      </div>
+      <!-- v3.5.0 REVISE5 — export readiness warning -->
+      <div id="s8-export-warn" style="display:none;opacity:0;font-size:13.5px;color:rgba(255,189,89,.88);line-height:1.55;padding:10px 0 2px;max-width:400px;transition:opacity .3s;"></div>
+      <div style="margin-top:var(--sp-xl);padding:18px 22px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-sm);font-size:var(--t-helper);color:rgba(255,255,255,.28);line-height:1.7;">
+        <span id="s8-disclaimer">本文件為創作者自行整理的版權紀錄，僅作為文件存檔與發行準備支援使用。不構成法律意見、著作權登記、發行商審核，亦不保證平台接受。</span>
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="back(8)" data-i18n="btn-back">← 返回</button>
+        <button class="btn btn-ghost" id="btn-restart" onclick="restart()">↺ 新增另一首作品</button>
+      </div>
+    </div>
+
+
+  <!-- v3.5.0 CreditGate REVISE3 — Inline credit status line -->
+  <div id="credit-statusline" class="credit-status-row">
+    <span class="cs-label" id="cs-trial-label">免費試用</span>：<span class="value" id="cs-trial-val">可使用</span><span class="cs-sep">·</span><span class="cs-label" id="cs-balance-label">剩餘點數</span>：<span class="value" id="cs-balance-val">0</span><span class="cs-sep">·</span><button onclick="buyCredits()" id="crd-btn-buy">購買點數</button><span class="cs-sep">·</span><button onclick="openRedeemModal()" id="crd-btn-redeem">兌換碼</button>
+  </div>
+  <!-- REVISE7: Manual save draft row -->
+  <div id="save-draft-area" style="display:none;text-align:center;margin:8px 0 4px 0;">
+    <button id="btn-save-draft" onclick="saveDraftNow()"
+      style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);
+             border-radius:8px;color:rgba(255,255,255,0.75);font-size:13px;
+             padding:6px 18px;cursor:pointer;transition:background 0.2s;"
+      onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+      onmouseout="this.style.background='rgba(255,255,255,0.08)'"
+      data-i18n="btn-save-draft">儲存草稿</button>
+    <span id="save-draft-msg" style="margin-left:10px;font-size:12.5px;
+           color:rgba(255,255,255,0.55);display:none;"
+      data-i18n="save-draft-msg">草稿已儲存在此裝置。</span>
+  </div>
+  </div><!-- /mn -->
+
+  <!-- RIGHT PREVIEW -->
+  <div id="pv">
+    <div class="pv-card glass">
+      <div class="pv-inner">
+        <div class="pv-title">發行整備狀態</div>
+        <div class="rl" id="pv-rl">
+          <div class="rl-row miss"><span class="ri">○</span><span data-i18n="pv-rl-0">作品身份</span></div>
+          <div class="rl-row miss"><span class="ri">○</span><span data-i18n="pv-rl-1">創作故事</span></div>
+          <div class="rl-row miss"><span class="ri">○</span><span data-i18n="pv-rl-2">AI 使用記錄</span></div>
+          <div class="rl-row miss"><span class="ri">○</span><span data-i18n="pv-rl-3">版權歸屬</span></div>
+          <div class="rl-row miss"><span class="ri">○</span><span data-i18n="pv-rl-4">證明文件</span></div>
+          <div class="rl-row miss"><span class="ri">○</span><span data-i18n="pv-rl-5">發行前準備</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="pv-card glass">
+      <div class="pv-inner">
+        <div class="pv-title">整體狀態</div>
+        <div class="ov-pill" id="ov-pill" style="background:rgba(255,255,255,.04);color:rgba(255,255,255,.28);">—</div>
+      </div>
+    </div>
+    <div class="pv-card glass">
+      <div class="pv-inner">
+        <div class="pv-title">填寫完整度</div>
+        <div class="cq-label" id="cq-label" style="color:rgba(255,255,255,.35);"></div>
+        <div class="cq-bar-wrap"><div class="cq-bar" id="cq-bar" style="width:0%"></div></div>
+        <div class="cq-hint" id="cq-hint"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+/* ════════════════════════════════════════════
+   STAR CANVAS
+════════════════════════════════════════════ */
+(()=>{
+  const c=document.getElementById('star-canvas');
+  const ctx=c.getContext('2d');
+  function resize(){c.width=innerWidth;c.height=innerHeight;}
+  resize(); window.addEventListener('resize',resize);
+  const stars=Array.from({length:180},()=>({
+    x:Math.random(), y:Math.random(),
+    r:Math.random()*1.5+.2,
+    a:Math.random(),
+    da:(Math.random()*.0035+.001)*(Math.random()>.5?1:-1),
+    col:Math.random()>.35?'255,255,255':'200,155,255'
+  }));
+  const draw=()=>{
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s=>{
+      s.a+=s.da; if(s.a>1||s.a<0) s.da*=-1;
+      ctx.beginPath();
+      ctx.arc(s.x*c.width, s.y*c.height, s.r, 0, Math.PI*2);
+      ctx.fillStyle=`rgba(${s.col},${s.a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  };
+  draw();
+})();
+
+/* dust */
+(()=>{
+  const types=[
+    {c:'rgba(122,92,255,.5)',s:3,d:8,dx:14},
+    {c:'rgba(200,255,176,.38)',s:2,d:11,dx:-20},
+    {c:'rgba(167,139,250,.42)',s:2.5,d:9,dx:10},
+    {c:'rgba(200,255,176,.25)',s:1.5,d:13,dx:-14},
+    {c:'rgba(220,180,255,.32)',s:2,d:7,dx:18},
+    {c:'rgba(122,92,255,.32)',s:1.5,d:14,dx:-9},
+  ];
+  types.forEach((t,i)=>{
+    setInterval(()=>{
+      const el=document.createElement('div');
+      el.className='dust-p';
+      el.style.cssText=`width:${t.s}px;height:${t.s}px;left:${Math.random()*100}%;--dx:${t.dx+(Math.random()*10-5)}px;background:${t.c};animation-duration:${t.d+Math.random()*4}s;animation-delay:${Math.random()*1.5}s;`;
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(),(t.d+7)*1000);
+    },1200+i*600);
+  });
+})();
+
+/* welcome particles */
+(()=>{
+  const wrap=document.getElementById('wparts');
+  const tick=()=>{
+    const p=document.createElement('div');
+    const sz=Math.random()*5+1.5;
+    p.style.cssText=`position:absolute;border-radius:50%;pointer-events:none;width:${sz}px;height:${sz}px;left:${Math.random()*100}%;bottom:${Math.random()*35}%;background:${Math.random()>.5?'rgba(122,92,255,.65)':'rgba(200,255,176,.5)'};animation:dustRise ${Math.random()*5+4}s linear forwards;--dx:${(Math.random()*28-14)}px;`;
+    wrap.appendChild(p);
+    setTimeout(()=>p.remove(),11000);
+  };
+  setInterval(tick,300);
+})();
+
+/* ════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════ */
+/* ════════════════════════════════════════════
+   i18n — zh-TW / EN bilingual  (v3.5.0 CreditGate PortalyMVP)
+════════════════════════════════════════════ */
+const STRINGS = {
+  zh: {
+    /* ── landing ── */
+    'hero-wordmark':'propi','hero-sub':'AI Music Proof-of-Rights Generator',
+    'hero-tagline':'整理發行前的 AI 音樂版權記錄。<br>本工具協助你準備 Proof-of-Rights 資料，<br><span style="font-size:13px;opacity:.7;">不構成法律意見，也不保證平台接受。</span>',
+    'mode-q':'你想先整理哪一種作品？','mode-single-label':'單首作品','mode-single-sub':'Proof-of-Rights',
+    'mode-batch-label':'EP / Album','mode-batch-sub':'批次整理',
+    'batch-ph-title':'⊞ EP / Album 批次整理',
+    'batch-ph-body':'批次整理會牽涉 EP / Album 層級資料與多首歌曲匯出，將在 v4 開放。此版本請先使用單首作品模式。<br><br><span style="font-size:13px;opacity:.70;">每首歌曲請分別使用單首作品模式整理，逐一建立 Proof-of-Rights 記錄。</span>',
+    'batch-ph-back':'← 使用單首作品模式',
+    'hero-micro':'Local-First · No Backend · No API · Your data stays here',
+    'save-text':'草稿已儲存在此裝置','btn-lang':'EN',
+    /* ── header ── */
+    'btn-return':'← 返回模式選擇',
+    'info-bar':'此工具協助整理發行前 Proof-of-Rights 資料，不構成法律意見，也不保證平台接受。',
+    /* ── right panel ── */
+    'pv-0':'發行整備狀態','pv-1':'整體狀態','pv-2':'填寫完整度',
+    'pv-rl-0':'作品身份','pv-rl-1':'創作故事','pv-rl-2':'AI 使用記錄',
+    'pv-rl-3':'版權歸屬','pv-rl-4':'證明文件','pv-rl-5':'發行前準備',
+    'ov-none':'尚未開始','ov-progress':'進行中 ','ov-mostly':'大部分完成 ','ov-ready':'✓ 準備就緒',
+    'cq-none-lbl':'尚未填寫','cq-none-hint':'填寫越完整，越有助於整理發行前的權利證明，也更方便之後複製貼給發行商或保存為作品紀錄。',
+    'cq-basic-lbl':'基本完成','cq-basic-hint':'建議繼續補齊版權歸屬、AI 使用說明與證明文件，讓記錄更完整。',
+    'cq-suggest-lbl':'建議補齊','cq-suggest-hint':'已填寫核心資訊，繼續補充證明文件與版稅協議，發行時會更有保障。',
+    'cq-high-lbl':'完整度高','cq-high-hint':'填寫非常完整！可以前往 Step 7 預覽確認，然後匯出文件。',
+    /* ── step nav track ── */
+    'step-l-1':'身份','step-n-1':'作品身份','step-l-2':'故事','step-n-2':'創作故事',
+    'step-l-3':'AI','step-n-3':'AI 使用','step-l-4':'版權','step-n-4':'所有權',
+    'step-l-5':'證明','step-n-5':'發行前證明','step-l-6':'整備','step-n-6':'發行準備',
+    'step-l-7':'確認','step-n-7':'預覽與確認','step-l-8':'匯出','step-n-8':'匯出',
+    /* ── step heads ── */
+    's1-title':'作品身份','s1-en':'Work Identity','s1-tone':'先幫這首作品建立基本身份。',
+    's2-title':'創作故事','s2-en':'Creation Story','s2-tone':'這首歌是怎麼開始的？',
+    's3-title':'AI 使用記錄','s3-en':'AI Usage Record','s3-tone':'我們把 AI 參與的部分說清楚，這樣之後發行時比較安心。',
+    's4-title':'所有權與版權','s4-en':'Ownership & Rights','s4-tone':'這一步是在確認作品的權利歸屬。',
+    's5-title':'發行前證明資料','s5-en':'Pre-Release Evidence','s5-tone':'發行前，先把能支撐這首作品的檔案記錄下來。這不是存檔——是確認「文件在哪、有沒有備妥」。',
+    's6-title':'發行前準備','s6-en':'Release Readiness','s6-tone':'我們檢查一下發行前還缺什麼。',
+    's7-title':'預覽與確認','s7-en':'Preview & Review','s7-tone':'文件草稿已就緒。請確認內容是否正確，有需要修改可以點左側步驟回頭調整，確認沒問題再前往匯出。',
+    's8-title':'匯出文件','s8-en':'Export','s8-tone':'完成了。這份文件可以列印、保存，或作為發行前的權利紀錄。',
+    /* ── step 1 ── */
+    'l-trackTitle':'曲名','l-artistName':'演出者','l-releaseType':'發行類型',
+    'l-versionName':'版本名稱','l-language':'語言','l-genre':'風格 / 情感','l-releaseDate':'預計發行日期',
+    'date-helper':'例如：2026-05-28。若尚未確定，可以先留空。',
+    'n1-text':'曲名和演出者是必填欄位，文件才能正確建立。',
+    'btn-back-disabled':'← 返回','btn-continue':'繼續 →','btn-back':'← 返回',
+    /* ── step 2 ── */
+    'l-creationMode':'創作模式','l-inspiration':'靈感 / 發想起源','l-ideaDate':'靈感開始的時間',
+    'l-production':'製作過程中有什麼改變？','l-humanDecisions':'人類創作決策記錄','l-artDirection':'情感或藝術方向備注',
+    'creationMode-helper':'選擇最接近的情境——這會直接影響 Proof-of-Rights 文件中的創作聲明內容。若是混合情境，請選最主要的模式，再在下方詳細說明。',
+    /* ── step 3 ── */
+    'l-aiTools':'使用了哪些 AI 工具？','l-aiParts':'AI 用在哪些部分？','s3-sec-div':'AI 涉及的具體範疇',
+    'ck-aiLyrics-label':'歌詞 Lyrics','ck-aiLyrics-hint':'使用 AI 工具協助創作歌詞內容',
+    'ck-aiVocals-label':'人聲 / Vocals','ck-aiVocals-hint':'使用了 AI 合成人聲或聲音模型',
+    'ck-aiComposition-label':'作曲 / Composition','ck-aiComposition-hint':'使用 AI 工具協助生成旋律、和弦或編曲',
+    'ck-aiArtwork-label':'封面圖 / Artwork','ck-aiArtwork-hint':'封面使用 AI 工具協作生成',
+    'l-humanRevision':'人工修改說明','s3-notice':'清楚說明 AI 用途有助於日後與發行商溝通，也能保護你的創作記錄。',
+    /* ── step 4 ── */
+    'l-masterOwner':'母帶所有人','l-compositionOwner':'曲目所有人','l-lyricist':'作詞者','l-composer':'作曲者',
+    'l-producer':'製作人','l-performer':'演出者 / 主唱','l-featured':'特邀藝人（如有）','l-splitNotes':'版稅分配備注',
+    'l-sampleUse':'取樣使用','sampleUse-helper':'「取樣」是指你是否使用了既有聲音、旋律、錄音、人聲、節奏片段或其他作品的一部分，再放進這首作品中。不是所有 AI 音樂都會取樣；如果你只是用 AI 生成全新的旋律或聲音，通常可以選擇「無取樣」。',
+    'l-artworkOwner':'封面圖版權','artworkOwner-helper':'若來源尚不明確，請先確認授權後再提交。選擇「需補件」代表此項目仍待確認，文件將標注為未完整。',
+    'l-agreementStatus':'協議狀態','s4-creator-div':'創作者聲明',
+    'ck-humanControlConfirm-label':'最終版本的音樂創作決策由我本人完成',
+    'ck-humanControlConfirm-hint':'使用 AI 工具協作的部分已經過人工審核、修改與確認，最終作品反映了我的創作意圖。',
+    /* ── step 5 ── */
+    's5-local-notice':'<b>本頁為本機紀錄。選擇檔案後只讀取檔名與大小，不讀取內容，不上傳，不傳送至任何伺服器。</b><br>所有資料僅保存在你的本機 localStorage。',
+    's5-dist-notice':'<b style="color:#ffbd59;">發行前請確認：</b>各發行商（DistroKid、TuneCore、CD Baby 等）對音檔格式、取樣率、位元深度、封面尺寸及大小均有不同要求，請至官網查閱最新規格。本工具不做壓縮或轉檔。<br><br><b style="color:#ffbd59;">檔案大小建議：</b>建議單一證明檔案控制在 8MB 以內，並在提交前確認發行商最新的檔案大小與格式限制。',
+    'fc-lbl-masterFile':'母帶音檔版本紀錄','fc-hlp-masterFile':'這裡不需要上傳音檔本身，只需記錄你準備提交給發行商的最終母帶版本，例如檔名、格式與保存位置。實際音檔請依發行商要求另行提交。',
+    'fc-lbl-artworkFile':'封面圖','fc-hlp-artworkFile':'記錄封面圖檔名，並備注版權來源（自行創作 / 使用 AI 工具協作 / 授權素材）。',
+    'fc-lbl-lyricFile':'歌詞文件','fc-hlp-lyricFile':'記錄最終版歌詞文件檔名與版本，確認與提交音檔同步。',
+    'fc-lbl-agreementFile':'合作協議','fc-hlp-agreementFile':'記錄授權書、委託協議或合作合約的檔名。尚未簽署請備注「待簽署」。',
+    'fc-lbl-aiRecord':'AI 生成記錄','fc-hlp-aiRecord':'這是最重要的 AI 透明度證明。記錄 prompt 截圖、AI 工具匯出紀錄、生成頁面截圖等。',
+    'fc-lbl-distScreenshot':'發行商提交截圖','fc-hlp-distScreenshot':'若已提交或規劃提交，記錄截圖檔名。尚未提交可填「待提交」或留空。',
+    'l-otherProof':'其他說明或補充文件','chip-local-badge':'僅保存在本機，不會上傳','chip-remove':'✕ 移除','btn-pick':'⊕ 選擇檔案',
+    /* ── step 6 ── */
+    'l-distributor':'發行平台','l-isrcStatus':'ISRC 狀態','l-upcStatus':'UPC 狀態',
+    's6-checklist-div':'發行前清單',
+    'ck-explicitOk-label':'限制級內容標示確認','ck-explicitOk-hint':'已確認是否需要 Explicit 標籤',
+    'ck-lyricsReady-label':'歌詞就緒','ck-lyricsReady-hint':'最終版本歌詞已確認',
+    'ck-coverReady-label':'封面圖就緒','ck-coverReady-hint':'符合發行規格',
+    'ck-aiDisclosureReady-label':'AI 使用申報就緒','ck-aiDisclosureReady-hint':'了解發行平台的 AI 聲明要求',
+    'ck-rightsProofReady-label':'版權證明就緒','ck-rightsProofReady-hint':'版權文件已整理',
+    'l-marketingNotes':'行銷素材備注（選填）','s6-readiness-label':'發行整備評估','btn-evalReady':'評估整備狀態 →',
+    /* ── step 7 ── */
+    's7-preview-title':'✦ Proof-of-Rights 文件摘要','btn-openDoc':'查看完整文件預覽','btn-back7':'← 返回修改',
+    's7-helper':'◦ PDF 列印、JSON 下載、純文字複製請前往下一步「匯出文件」。','btn-goExport':'前往匯出 →',
+    /* ── step 8 ── */
+    'final-ready':'— 文件已就緒 ✦','btn-openDocFull':'查看 / 列印完整文件',
+    'btn-exportJSON':'{ } 下載 JSON 存檔','btn-copyText':'⎘ 複製純文字報告',
+    's8-disclaimer':'本文件為創作者自行整理的版權紀錄，僅作為文件存檔與發行準備支援使用。不構成法律意見、著作權登記、發行商審核，亦不保證平台接受。',
+    'btn-restart':'↺ 新增另一首作品',
+    /* ── propri messages ── */
+    'msg-entry':'我們一起整理這首<br>作品的創作紀錄吧。','msg-idle':'慢慢來，我會陪你<br>一步一步完成。',
+    'msg-focus':'我正在幫你整理成<br>可保存的紀錄。','msg-complete':'這一段已經整理好了。 ✦',
+    'msg-missing':'這裡可能還需要<br>補一點證明，<br>文件才會更完整。',
+    'msg-sleep':'你暫時離開時，<br>我會幫你守著<br>這份紀錄。','msg-wake':'歡迎回來，<br>我們繼續。',
+    'msg-export-ready':'你的文件<br>可以產生了。 ✦','msg-done':'完成了。這份文件<br>可以列印與保存。',
+    /* ── dialogs ── */
+    'confirm-return':'返回模式選擇頁面。\n\n目前填寫的草稿已保存在本機，下次開啟可繼續使用。\n\n確定返回？',
+    'confirm-restart':'確定要清除目前紀錄，開始新的作品嗎？',
+    /* ── toasts ── */
+    'toast-json':'JSON 存檔已下載 ✦','toast-copy':'文字報告已複製 ✦','toast-copy-fail':'請手動複製',
+    /* ── buildDocSum ── */
+    'ds-title':'作品名稱：','ds-artist':'演出者：','ds-release':'發行類型：',
+    'ds-decisions':'人類創作決策：','ds-aitools':'AI 工具：','ds-declaration':'創作者聲明：',
+    'ds-confirmed':'✓ 已確認最終版本由人工完成','ds-pending':'（尚未勾選）',
+    'ds-master':'母帶所有人：','ds-sample':'取樣狀態：','ds-unfilled':'（未填）','ds-none':'（無）',
+    /* ── buildFullDoc section headers ── */
+    'doc-s1':'1. 作品身份 Work Identity','doc-s2':'2. 創作聲明 Creator Statement',
+    'doc-s3':'3. 人類創作貢獻 Human Creative Contribution','doc-s4':'4. AI 使用揭露 AI Usage Disclosure',
+    'doc-s5':'5. 所有權聲明 Ownership Declaration','doc-s6':'6. 證明文件清單 Evidence Archive',
+    'doc-s7':'7. 發行前整備 Release Readiness',
+    'doc-s8':'8. 隱私聲明 Local-First Privacy Note',
+    /* ── buildFullDoc row labels ── */
+    'dr-trackTitle':'曲名','dr-artistName':'演出者','dr-releaseType':'發行類型','dr-versionName':'版本',
+    'dr-language':'語言','dr-genre':'風格','dr-releaseDate':'預計發行',
+    'dr-creationMode':'創作模式','dr-inspiration':'靈感起源','dr-ideaDate':'靈感時間',
+    'dr-production':'製作過程','dr-artDirection':'情感方向','dr-humanDecisions':'創作決策記錄',
+    'dr-humanControlConfirm':'創作者聲明','dr-confirmed':'✓ 最終版本由人工審核確認','dr-unconfirmed':'（未確認）',
+    'dr-aiTools':'使用工具','dr-aiParts':'AI 用途說明','dr-humanRevision':'人工修改說明',
+    'dr-aiScope':'AI 涉及範疇','dr-aiNone':'無',
+    'dr-masterOwner':'母帶所有人','dr-compositionOwner':'曲目所有人','dr-lyricist':'作詞者',
+    'dr-composer':'作曲者','dr-producer':'製作人','dr-performer':'演出者','dr-featured':'特邀藝人',
+    'dr-splitNotes':'版稅分配','dr-artworkOwner':'封面版權','dr-sampleUse':'取樣狀態',
+    'dr-agreementStatus':'協議狀態','dr-masterFile':'母帶檔案名稱','dr-masterFormat':'音檔格式',
+    'dr-masterFilePath':'保存位置','dr-masterNotes':'母帶備註','dr-artworkFile':'封面圖',
+    'dr-lyricFile':'歌詞文件','dr-agreementFile':'合作協議','dr-aiRecord':'AI 生成記錄',
+    'dr-distScreenshot':'發行截圖','dr-otherProof':'其他說明','dr-distributor':'發行平台',
+    'dr-isrcStatus':'ISRC','dr-upcStatus':'UPC','dr-lyricsReady':'歌詞就緒','dr-coverReady':'封面就緒',
+    'dr-aiDisclosureReady':'AI 申報就緒','dr-rightsProofReady':'版權就緒','dr-yes':'✓','dr-no':'—',
+    /* ── AI scope labels ── */
+    'ai-lyrics':'歌詞','ai-vocals':'人聲','ai-composition':'作曲','ai-artwork':'封面圖',
+    /* ── creationMode display ── */
+    'cm-fully-human':'完全人工創作','cm-ai-assist':'人工為主 + AI 輔助修改',
+    'cm-ai-draft-human-rework':'AI 初稿 + 人工大幅修改','cm-ai-collab':'AI 與人工深度共同創作',
+    'cm-fully-ai':'以 AI 工具為主協作',
+    /* ── doc overlay static ── */
+    'doc-brandline':'AI Music Proof-of-Rights Generator · Guided Rights QA Journal · v3.4.8',
+    'doc-disclaimer':'本文件為創作者自行整理的版權紀錄，不構成法律意見，也不保證平台接受。',
+    'doc-footer':'propri · AI Music Proof-of-Rights Generator v3.4.8 · Local-First Archive · Powered by Kaola',
+    'doc-privacy-note':'本文件由 propri AI Music Proof-of-Rights Generator 在本機生成。所有資料僅保存於使用者本機的 localStorage，從未上傳至任何伺服器。本工具不含任何後端連線、API 呼叫、追蹤或遙測。',
+    /* ── select options ── */
+    'sel-placeholder':'選擇',
+    'releaseType-opts':[['','選擇'],['Single','Single'],['EP','EP'],['Album','Album'],['Remix','Remix'],['Instrumental','Instrumental'],['Cover','Cover']],
+    'language-opts':[['','選擇'],['中文','中文'],['English','English'],['日本語','日本語'],['Instrumental','Instrumental'],['其他','其他']],
+    'creationMode-opts':[['','請選擇最符合的情境'],['fully-human','完全人工創作 — 無 AI 工具參與'],['ai-assist','人工為主 + AI 輔助修改 — AI 作為效率工具'],['ai-draft-human-rework','AI 初稿 + 人工大幅修改 — 人工主導最終版本'],['ai-collab','AI 與人工深度共同創作 — 兩者密切結合'],['fully-ai','以 AI 工具為主協作 — 人工監督完成']],
+    'sampleUse-opts':[['','選擇'],['none','無取樣'],['cleared','有取樣，已清 sample'],['uncleared','有取樣，未清 sample ⚠'],['unknown','不確定']],
+    'artworkOwner-opts':[['','選擇'],['self','自行創作'],['ai-self','使用 AI 工具協作生成'],['licensed','授權使用（已取得授權）'],['needs-supplement','需補件 / 暫不建議提交']],
+    'agreementStatus-opts':[['','選擇'],['all-signed','所有協議已簽署'],['verbal','口頭協議'],['pending','協議待簽'],['na','不適用（個人作品）']],
+    'isrcStatus-opts':[['','選擇'],['obtained','已取得'],['pending','申請中'],['na','待處理']],
+    'upcStatus-opts':[['','選擇'],['obtained','已取得'],['pending','申請中'],['na','待處理']],
+    /* ── placeholders ── */
+    'ph-trackTitle':'e.g. Moonlight Protocol','ph-artistName':'e.g. Kaola Yuzu','ph-versionName':'e.g. Acoustic Mix',
+    'ph-genre':'e.g. Ambient / Melancholic','ph-releaseDate':'YYYY-MM-DD　例如：2026-05-28',
+    'ph-inspiration':'這首歌的想法是從哪裡來的？','ph-ideaDate':'e.g. 2025年底 / 某個失眠的夜晚',
+    'ph-production':'從最初想法到最終版本，中間發生了什麼？',
+    'ph-humanDecisions':'你做了哪些關鍵創作選擇？例如曲調走向、情感定位、歌詞核心概念...',
+    'ph-artDirection':'這首作品想傳達的感受或主題',
+    'ph-aiTools':'e.g. Suno, Udio, ChatGPT, MusicGen...',
+    'ph-aiParts':'請具體說明，例如：AI 生成初版旋律，人工修改了節奏和編曲...',
+    'ph-humanRevision':'使用 AI 工具協作後，你做了哪些調整或再創作？',
+    'ph-masterOwner':'姓名或公司','ph-compositionOwner':'姓名或公司',
+    'ph-lyricist':'姓名','ph-composer':'姓名','ph-producer':'姓名','ph-performer':'姓名',
+    'ph-featured':'姓名 — 請確保已有合作協議','ph-splitNotes':'e.g. 詞曲 70% / 製作 30%',
+    'ph-distributor':'e.g. DistroKid / TuneCore / CD Baby',
+    'ph-marketingNotes':'社群圖片、宣傳文案、預告片等素材狀態',
+    'ph-masterFile':'母帶檔案名稱　e.g. final_master_v3.wav',
+    'ph-masterFormat':'音檔格式　e.g. WAV / 44.1kHz / 24-bit',
+    'ph-masterFilePath':'本機保存路徑 / 雲端保存位置　e.g. /Music/Releases/AlbumName/',
+    'ph-masterNotes':'備註　e.g. 最終版，已過 loudness check',
+    'ph-artworkFile':'e.g. cover_art_v3.png（自行創作）',
+    'ph-lyricFile':'e.g. lyrics_final_v2.txt',
+    'ph-agreementFile':'e.g. collab_agreement_signed.pdf（或「待簽署」）',
+    'ph-aiRecord':'e.g. suno_prompt_screenshots.zip',
+    'ph-distScreenshot':'e.g. distrokid_submit_2025-12.png',
+    'ph-otherProof':'其他可支持本作品的文件名稱、存放位置或備注說明',
+    /* ── copy template ── */
+    'copy-artist':'演出者: ','copy-release':'發行類型: ','copy-master':'母帶所有人: ',
+    'copy-aitools':'AI 工具: ','copy-none':'無',
+    /* ── calcReady detail ── */
+    'ready-highrisk-sample':'有取樣未清或狀態不明，建議先處理後再發行。',
+    'ready-review-artwork':'封面圖版權尚待補件確認，建議在發行前補齊。',
+    'ready-highrisk-featured':'有特邀藝人但版稅分配未記錄，建議補齊協議。',
+    'ready-missing-master':'母帶所有人尚未填寫。',
+    'ready-review-checklist':'發行前清單完成 %n/5 項，建議補充。',
+    'ready-ready':'核心資訊完整，可進行文件產出。',
+    /* ── ready chip labels ── */
+    'chip-highrisk':'⚠ High Risk','chip-review':'△ Needs Review','chip-missing':'◇ Missing Proof','chip-ready':'✓ Ready',
+    /* ── new v3.4.7 keys ── */
+    'next-ver-badge':'下一版開放',
+    'doc-bar-title':'✦ Proof-of-Rights 文件預覽',
+    'doc-btn-print':'🖨 列印 / PDF','doc-btn-json':'{ } JSON',
+    'doc-btn-copy':'⎘ 複製','doc-btn-close':'✕ 關閉',
+    'doc-meta-generated':'生成時間：','doc-meta-local':'本機存檔',
+    'doc-meta-legal':'不構成法律意見',
+    'copy-generated':'生成於：',
+    /* artwork/sample/agreement display maps */
+    'ao-self':'自行創作','ao-ai-self':'使用 AI 工具協作生成',
+    'ao-licensed':'授權使用（已取得授權）','ao-needs-supplement':'需補件 / 暫不建議提交',
+    'su-none':'無取樣','su-cleared':'有取樣，已清 sample',
+    'su-uncleared':'有取樣，未清 sample ⚠','su-unknown':'不確定',
+    'as-all-signed':'所有協議已簽署','as-verbal':'口頭協議',
+    'as-pending':'協議待簽','as-na':'不適用（個人作品）',
+    'is-obtained':'已取得','is-pending':'申請中','is-na':'待處理',
+    /* ── REVISE7: draft UI ── */
+    'mode-q-draft'       : '發現本機有儲存的草稿',
+    'mode-continue-draft': '繼續上次草稿',
+    'mode-new-proof'     : '建立新的 proof',
+    'btn-save-draft'     : '儲存草稿',
+    'save-draft-msg'     : '草稿已儲存在此裝置。',
+  },
+  en: {
+    /* ── landing ── */
+    'hero-wordmark':'propi','hero-sub':'AI Music Proof-of-Rights Generator',
+    'hero-tagline':'Organize your AI music rights record before release.<br>This tool helps you prepare Proof-of-Rights documentation.<br><span style="font-size:13px;opacity:.7;">Not legal advice. Platform acceptance not guaranteed.</span>',
+    'mode-q':'What would you like to document first?','mode-single-label':'Single Track','mode-single-sub':'Proof-of-Rights',
+    'mode-batch-label':'EP / Album','mode-batch-sub':'Batch mode',
+    'batch-ph-title':'⊞ EP / Album Batch Mode',
+    'batch-ph-body':'Batch mode for EP / Album level data and multi-track export will be available in v4. Please use single track mode for now.<br><br><span style="font-size:13px;opacity:.70;">Document each track separately using single track mode to build individual Proof-of-Rights records.</span>',
+    'batch-ph-back':'← Use single track mode',
+    'hero-micro':'Local-First · No Backend · No API · Your data stays here',
+    'save-text':'Draft saved locally on this device.','btn-lang':'中',
+    /* ── header ── */
+    'btn-return':'← Back to mode selection',
+    'info-bar':'This tool helps prepare Proof-of-Rights documentation before release. Not legal advice. Platform acceptance not guaranteed.',
+    /* ── right panel ── */
+    'pv-0':'Release Readiness','pv-1':'Overall Status','pv-2':'Completion',
+    'pv-rl-0':'Work Identity','pv-rl-1':'Creation Story','pv-rl-2':'AI Usage',
+    'pv-rl-3':'Rights & Ownership','pv-rl-4':'Evidence Files','pv-rl-5':'Release Prep',
+    'ov-none':'Not started','ov-progress':'In progress ','ov-mostly':'Mostly done ','ov-ready':'✓ Ready',
+    'cq-none-lbl':'Not started','cq-none-hint':'The more complete your record, the easier it is to prepare rights documentation for your distributor.',
+    'cq-basic-lbl':'Basics done','cq-basic-hint':'Continue filling in ownership, AI usage details, and supporting evidence to strengthen your record.',
+    'cq-suggest-lbl':'Fill in more','cq-suggest-hint':'Core info is in. Adding evidence files and agreement details will improve your release preparation.',
+    'cq-high-lbl':'Comprehensive','cq-high-hint':'Your record is very complete! Head to Step 7 to preview and export.',
+    /* ── step nav track ── */
+    'step-l-1':'Identity','step-n-1':'Work Identity','step-l-2':'Story','step-n-2':'Creation Story',
+    'step-l-3':'AI','step-n-3':'AI Usage','step-l-4':'Rights','step-n-4':'Ownership',
+    'step-l-5':'Evidence','step-n-5':'Pre-Release','step-l-6':'Readiness','step-n-6':'Release Prep',
+    'step-l-7':'Review','step-n-7':'Preview','step-l-8':'Export','step-n-8':'Export',
+    /* ── step heads ── */
+    's1-title':'Work Identity','s1-en':'Work Identity','s1-tone':'Establish the basic identity of this work.',
+    's2-title':'Creation Story','s2-en':'Creation Story','s2-tone':'How did this work come to be?',
+    's3-title':'AI Usage Record','s3-en':'AI Usage Record','s3-tone':'Document clearly what AI tools were involved.',
+    's4-title':'Ownership & Rights','s4-en':'Ownership & Rights','s4-tone':'Confirm who owns what in this work.',
+    's5-title':'Pre-Release Evidence','s5-en':'Pre-Release Evidence','s5-tone':'Record the files that support this work before release. This is not an upload — just a reference checklist.',
+    's6-title':'Release Readiness','s6-en':'Release Readiness','s6-tone':"Let's check what still needs attention before release.",
+    's7-title':'Preview & Review','s7-en':'Preview & Review','s7-tone':'Your draft is ready. Review the content, make any adjustments by clicking the steps on the left, then proceed to export.',
+    's8-title':'Export Document','s8-en':'Export','s8-tone':'Done. This document can be printed, saved, or kept as a pre-release rights record.',
+    /* ── step 1 ── */
+    'l-trackTitle':'Track Title','l-artistName':'Artist Name','l-releaseType':'Release Type',
+    'l-versionName':'Version Name','l-language':'Language','l-genre':'Genre / Mood','l-releaseDate':'Expected Release Date',
+    'date-helper':'e.g. 2026-05-28. Leave blank if not confirmed yet.',
+    'n1-text':'Track title and artist name are required to generate the document.',
+    'btn-back-disabled':'← Back','btn-continue':'Continue →','btn-back':'← Back',
+    /* ── step 2 ── */
+    'l-creationMode':'Creation Mode','l-inspiration':'Inspiration / Origin','l-ideaDate':'When the idea started',
+    'l-production':'What changed during production?','l-humanDecisions':'Human creative decisions','l-artDirection':'Emotional or artistic direction notes',
+    'creationMode-helper':'Choose the scenario that best fits — this directly affects the creator statement in your document. For mixed cases, select the primary mode and explain below.',
+    /* ── step 3 ── */
+    'l-aiTools':'Which AI tools were used?','l-aiParts':'What parts did AI assist with?','s3-sec-div':'Specific areas of AI involvement',
+    'ck-aiLyrics-label':'Lyrics','ck-aiLyrics-hint':'Created lyrics content with AI assistance',
+    'ck-aiVocals-label':'Vocals','ck-aiVocals-hint':'Used AI-synthesized voice or vocal model',
+    'ck-aiComposition-label':'Composition','ck-aiComposition-hint':'Generated melody, chords, or arrangement with AI assistance',
+    'ck-aiArtwork-label':'Artwork','ck-aiArtwork-hint':'Cover art created with AI tool assistance',
+    'l-humanRevision':'Human revision notes','s3-notice':'Documenting AI involvement clearly helps communication with distributors and protects your creative record.',
+    /* ── step 4 ── */
+    'l-masterOwner':'Master Recording Owner','l-compositionOwner':'Composition Owner','l-lyricist':'Lyricist','l-composer':'Composer',
+    'l-producer':'Producer','l-performer':'Performer / Lead Artist','l-featured':'Featured Artist (if any)','l-splitNotes':'Royalty split notes',
+    'l-sampleUse':'Sample Use','sampleUse-helper':'"Sampling" means using part of an existing sound recording, melody, vocal, beat, rhythm loop, or another work inside this release. Not all AI music involves sampling — if you only used AI to generate completely new melodies or sounds, you can typically choose "No samples".',
+    'l-artworkOwner':'Cover Art Rights','artworkOwner-helper':'If the source is unclear, confirm rights before submitting. "Needs documentation" means the item is pending — the document will be marked as incomplete.',
+    'l-agreementStatus':'Agreement Status','s4-creator-div':'Creator Declaration',
+    'ck-humanControlConfirm-label':'Final creative decisions were made by me',
+    'ck-humanControlConfirm-hint':'AI-assisted portions have been reviewed, revised, and confirmed by me. The final work reflects my creative intent.',
+    /* ── step 5 ── */
+    's5-local-notice':'<b>This page is local-only. Selecting a file only reads the filename and size — no content is read, no upload occurs, nothing is sent to any server.</b><br>All data is stored only in your browser\'s localStorage.',
+    's5-dist-notice':'<b style="color:#ffbd59;">Before release, confirm:</b> Each distributor (DistroKid, TuneCore, CD Baby, etc.) has different requirements for audio format, sample rate, bit depth, artwork size, and file size. Check their latest specs. This tool does not compress or transcode files.<br><br><b style="color:#ffbd59;">File size guidance:</b> Keep each proof file under 8MB where possible, and confirm your distributor\'s latest limits before submitting.',
+    'fc-lbl-masterFile':'Master Audio Version Record','fc-hlp-masterFile':'You do not need to upload the audio file here. Just record the filename, format, and storage location of the master you plan to submit. Submit the actual audio directly to your distributor.',
+    'fc-lbl-artworkFile':'Cover Art','fc-hlp-artworkFile':'Record the cover art filename and note the rights source (created manually / created with AI assistance / licensed).',
+    'fc-lbl-lyricFile':'Lyrics File','fc-hlp-lyricFile':'Record the final lyrics filename and version, confirming it matches the submitted audio.',
+    'fc-lbl-agreementFile':'Collaboration Agreement','fc-hlp-agreementFile':'Record the filename of any license, commission, or collaboration contract. Note "pending signature" if not yet signed.',
+    'fc-lbl-aiRecord':'AI Usage Record','fc-hlp-aiRecord':'This is the most important AI transparency proof. Record prompt screenshots, AI tool export logs, generation page screenshots, etc.',
+    'fc-lbl-distScreenshot':'Distributor Submission Screenshot','fc-hlp-distScreenshot':'If already submitted or planned, record the screenshot filename. Fill "pending" or leave blank if not yet submitted.',
+    'l-otherProof':'Other notes or supporting evidence','chip-local-badge':'Stored locally only, not uploaded','chip-remove':'✕ Remove','btn-pick':'⊕ Select file',
+    /* ── step 6 ── */
+    'l-distributor':'Distribution Platform','l-isrcStatus':'ISRC Status','l-upcStatus':'UPC Status',
+    's6-checklist-div':'Pre-Release Checklist',
+    'ck-explicitOk-label':'Explicit content label confirmed','ck-explicitOk-hint':'Confirmed whether an Explicit tag is needed',
+    'ck-lyricsReady-label':'Lyrics ready','ck-lyricsReady-hint':'Final lyrics confirmed',
+    'ck-coverReady-label':'Cover art ready','ck-coverReady-hint':'Meets distributor specs',
+    'ck-aiDisclosureReady-label':'AI disclosure ready','ck-aiDisclosureReady-hint':"Understand the distribution platform's AI declaration requirements",
+    'ck-rightsProofReady-label':'Rights proof ready','ck-rightsProofReady-hint':'Rights documentation organized',
+    'l-marketingNotes':'Marketing materials notes (optional)','s6-readiness-label':'Readiness Assessment','btn-evalReady':'Evaluate readiness →',
+    /* ── step 7 ── */
+    's7-preview-title':'✦ Proof-of-Rights Document Summary','btn-openDoc':'View full document preview','btn-back7':'← Back to edit',
+    's7-helper':'◦ PDF print, JSON download, and plain text copy are in the next step — Export.','btn-goExport':'Go to Export →',
+    /* ── step 8 ── */
+    'final-ready':'— Document ready ✦','btn-openDocFull':'View / Print full document',
+    'btn-exportJSON':'{ } Download JSON archive','btn-copyText':'⎘ Copy plain text report',
+    's8-disclaimer':'This document is a self-organized rights record prepared by the creator, intended for archiving and pre-release preparation only. It does not constitute legal advice, copyright registration, distributor review, or guarantee platform acceptance.',
+    'btn-restart':'↺ Start a new work',
+    /* ── propri messages ── */
+    'msg-entry':"Let's organize this work's<br>creative record together.",'msg-idle':"Take your time. I'm here<br>with you all the way.",
+    'msg-focus':"I'm helping you organize<br>this into a saved record.",'msg-complete':'This section is done. ✦',
+    'msg-missing':'A little more evidence here<br>would make the document<br>more complete.',
+    'msg-sleep':"While you're away,<br>I'll keep your record safe.",'msg-wake':"Welcome back.<br>Let's continue.",
+    'msg-export-ready':'Your document<br>is ready to generate. ✦','msg-done':'Done. This document<br>can be printed and saved.',
+    /* ── dialogs ── */
+    'confirm-return':'Return to mode selection.\n\nYour draft is saved locally and will be available next time.\n\nConfirm?',
+    'confirm-restart':'Clear current record and start a new work?',
+    /* ── toasts ── */
+    'toast-json':'JSON archive downloaded ✦','toast-copy':'Text report copied ✦','toast-copy-fail':'Please copy manually',
+    /* ── buildDocSum ── */
+    'ds-title':'Track Title: ','ds-artist':'Artist: ','ds-release':'Release Type: ',
+    'ds-decisions':'Human creative decisions: ','ds-aitools':'AI Tools: ','ds-declaration':'Creator Declaration: ',
+    'ds-confirmed':'✓ Final version confirmed as human-directed','ds-pending':'(not yet confirmed)',
+    'ds-master':'Master Owner: ','ds-sample':'Sample status: ','ds-unfilled':'(not filled)','ds-none':'(none)',
+    /* ── buildFullDoc section headers ── */
+    'doc-s1':'1. Work Identity','doc-s2':'2. Creator Statement',
+    'doc-s3':'3. Human Creative Contribution','doc-s4':'4. AI Usage Disclosure',
+    'doc-s5':'5. Ownership Declaration','doc-s6':'6. Evidence Archive',
+    'doc-s7':'7. Release Readiness','doc-s8':'8. Local-First Privacy Note',
+    /* ── buildFullDoc row labels ── */
+    'dr-trackTitle':'Track Title','dr-artistName':'Artist','dr-releaseType':'Release Type','dr-versionName':'Version',
+    'dr-language':'Language','dr-genre':'Genre','dr-releaseDate':'Expected Release',
+    'dr-creationMode':'Creation Mode','dr-inspiration':'Inspiration','dr-ideaDate':'Idea Started',
+    'dr-production':'Production Notes','dr-artDirection':'Artistic Direction','dr-humanDecisions':'Human Creative Decisions',
+    'dr-humanControlConfirm':'Creator Declaration','dr-confirmed':'✓ Final version human-reviewed and confirmed','dr-unconfirmed':'(not confirmed)',
+    'dr-aiTools':'AI Tools Used','dr-aiParts':'AI Usage Description','dr-humanRevision':'Human Revision Notes',
+    'dr-aiScope':'AI Involvement Areas','dr-aiNone':'None',
+    'dr-masterOwner':'Master Recording Owner','dr-compositionOwner':'Composition Owner','dr-lyricist':'Lyricist',
+    'dr-composer':'Composer','dr-producer':'Producer','dr-performer':'Performer','dr-featured':'Featured Artist',
+    'dr-splitNotes':'Royalty Split','dr-artworkOwner':'Cover Art Rights','dr-sampleUse':'Sample Status',
+    'dr-agreementStatus':'Agreement Status','dr-masterFile':'Master Filename','dr-masterFormat':'Audio Format',
+    'dr-masterFilePath':'Storage Location','dr-masterNotes':'Master Notes','dr-artworkFile':'Cover Art File',
+    'dr-lyricFile':'Lyrics File','dr-agreementFile':'Agreement File','dr-aiRecord':'AI Usage Record',
+    'dr-distScreenshot':'Distributor Screenshot','dr-otherProof':'Other Notes','dr-distributor':'Distribution Platform',
+    'dr-isrcStatus':'ISRC','dr-upcStatus':'UPC','dr-lyricsReady':'Lyrics Ready','dr-coverReady':'Cover Ready',
+    'dr-aiDisclosureReady':'AI Disclosure Ready','dr-rightsProofReady':'Rights Proof Ready','dr-yes':'✓','dr-no':'—',
+    /* ── AI scope labels ── */
+    'ai-lyrics':'Lyrics','ai-vocals':'Vocals','ai-composition':'Composition','ai-artwork':'Artwork',
+    /* ── creationMode display ── */
+    'cm-fully-human':'Fully human','cm-ai-assist':'Human-led + AI-assisted',
+    'cm-ai-draft-human-rework':'AI draft + human rework','cm-ai-collab':'Deep human–AI collaboration',
+    'cm-fully-ai':'AI-tool-led with human oversight',
+    /* ── doc overlay static ── */
+    'doc-brandline':'AI Music Proof-of-Rights Generator · Guided Rights QA Journal · v3.4.8',
+    'doc-disclaimer':'This document is a self-organized rights record. Not legal advice. Platform acceptance not guaranteed.',
+    'doc-footer':'propri · AI Music Proof-of-Rights Generator v3.4.8 · Local-First Archive · Powered by Kaola',
+    'doc-privacy-note':"This document was generated locally by propri. All data is stored only in the user's browser localStorage and has never been uploaded to any server. This tool has no backend connections, API calls, tracking, or telemetry.",
+    /* ── select options ── */
+    'sel-placeholder':'Select',
+    'releaseType-opts':[['','Select'],['Single','Single'],['EP','EP'],['Album','Album'],['Remix','Remix'],['Instrumental','Instrumental'],['Cover','Cover']],
+    'language-opts':[['','Select'],['中文','Chinese'],['English','English'],['日本語','Japanese'],['Instrumental','Instrumental'],['其他','Other']],
+    'creationMode-opts':[['','Select the closest scenario'],['fully-human','Fully human — no AI tools involved'],['ai-assist','Human-led + AI-assisted editing — AI as a productivity tool'],['ai-draft-human-rework','AI draft + substantial human rework — human directed final version'],['ai-collab','Deep human–AI collaboration — both closely intertwined'],['fully-ai','AI-tool-led with human oversight — human supervised completion']],
+    'sampleUse-opts':[['','Select'],['none','No samples'],['cleared','Samples used, cleared'],['uncleared','Samples used, NOT cleared ⚠'],['unknown','Uncertain']],
+    'artworkOwner-opts':[['','Select'],['self','Created manually'],['ai-self','Created with AI assistance'],['licensed','Licensed use with permission'],['needs-supplement','Needs documentation / Not recommended yet']],
+    'agreementStatus-opts':[['','Select'],['all-signed','All agreements signed'],['verbal','Verbal agreement'],['pending','Agreement pending'],['na','Not applicable (solo work)']],
+    'isrcStatus-opts':[['','Select'],['obtained','Obtained'],['pending','In progress'],['na','Pending']],
+    'upcStatus-opts':[['','Select'],['obtained','Obtained'],['pending','In progress'],['na','Pending']],
+    /* ── placeholders ── */
+    'ph-trackTitle':'e.g. Moonlight Protocol','ph-artistName':'e.g. Kaola Yuzu','ph-versionName':'e.g. Acoustic Mix',
+    'ph-genre':'e.g. Ambient / Melancholic','ph-releaseDate':'YYYY-MM-DD  e.g. 2026-05-28',
+    'ph-inspiration':'Where did the idea for this track come from?','ph-ideaDate':'e.g. late 2025 / a sleepless night',
+    'ph-production':'What changed from the initial idea to the final version?',
+    'ph-humanDecisions':'What key creative choices did you make? e.g. melodic direction, emotional tone, lyric concept...',
+    'ph-artDirection':'The feeling or theme this work aims to convey',
+    'ph-aiTools':'e.g. Suno, Udio, ChatGPT, MusicGen...',
+    'ph-aiParts':'Describe specifically, e.g. AI generated an initial melody, human revised the rhythm and arrangement...',
+    'ph-humanRevision':'What adjustments or creative changes did you make after using AI tools?',
+    'ph-masterOwner':'Name or company','ph-compositionOwner':'Name or company',
+    'ph-lyricist':'Name','ph-composer':'Name','ph-producer':'Name','ph-performer':'Name',
+    'ph-featured':'Name — ensure a collaboration agreement is in place','ph-splitNotes':'e.g. Lyrics/melody 70% / Production 30%',
+    'ph-distributor':'e.g. DistroKid / TuneCore / CD Baby',
+    'ph-marketingNotes':'Social media assets, promo copy, trailer status, etc.',
+    'ph-masterFile':'Master filename  e.g. final_master_v3.wav',
+    'ph-masterFormat':'Audio format  e.g. WAV / 44.1kHz / 24-bit',
+    'ph-masterFilePath':'Local path / cloud storage location  e.g. /Music/Releases/AlbumName/',
+    'ph-masterNotes':'Notes  e.g. Final version, loudness check passed',
+    'ph-artworkFile':'e.g. cover_art_v3.png (created manually)',
+    'ph-lyricFile':'e.g. lyrics_final_v2.txt',
+    'ph-agreementFile':'e.g. collab_agreement_signed.pdf (or "pending signature")',
+    'ph-aiRecord':'e.g. suno_prompt_screenshots.zip',
+    'ph-distScreenshot':'e.g. distrokid_submit_2025-12.png',
+    'ph-otherProof':'Other supporting document names, storage locations, or notes',
+    /* ── copy template ── */
+    'copy-artist':'Artist: ','copy-release':'Release Type: ','copy-master':'Master Owner: ',
+    'copy-aitools':'AI Tools: ','copy-none':'None',
+    /* ── calcReady detail ── */
+    'ready-highrisk-sample':'Uncleared or uncertain samples found. Resolve before releasing.',
+    'ready-review-artwork':'Cover art rights need documentation. Complete before releasing.',
+    'ready-highrisk-featured':'Featured artist present but royalty split not recorded. Add an agreement.',
+    'ready-missing-master':'Master recording owner not filled in.',
+    'ready-review-checklist':'Pre-release checklist: %n/5 items done. Fill in more.',
+    'ready-ready':'Core information complete. Ready to generate document.',
+    /* ── ready chip labels ── */
+    'chip-highrisk':'⚠ High Risk','chip-review':'△ Needs Review','chip-missing':'◇ Missing Proof','chip-ready':'✓ Ready',
+    /* ── new v3.4.7 keys ── */
+    'next-ver-badge':'Coming in v4',
+    'doc-bar-title':'✦ Proof-of-Rights Document Preview',
+    'doc-btn-print':'🖨 Print / PDF','doc-btn-json':'{ } JSON',
+    'doc-btn-copy':'⎘ Copy','doc-btn-close':'✕ Close',
+    'doc-meta-generated':'Generated: ','doc-meta-local':'Local-First Archive',
+    'doc-meta-legal':'Not Legal Advice',
+    'copy-generated':'Generated: ',
+    /* artwork/sample/agreement display maps */
+    'ao-self':'Created manually','ao-ai-self':'Created with AI assistance',
+    'ao-licensed':'Licensed use with permission','ao-needs-supplement':'Needs documentation / Not recommended yet',
+    'su-none':'No samples','su-cleared':'Samples used, cleared',
+    'su-uncleared':'Samples used, NOT cleared ⚠','su-unknown':'Uncertain',
+    'as-all-signed':'All agreements signed','as-verbal':'Verbal agreement',
+    'as-pending':'Agreement pending','as-na':'Not applicable (solo work)',
+    'is-obtained':'Obtained','is-pending':'In progress','is-na':'Pending',
+    /* ── REVISE7: draft UI ── */
+    'mode-q-draft'       : 'You have a saved draft on this device',
+    'mode-continue-draft': 'Continue saved draft',
+    'mode-new-proof'     : 'Start a new proof',
+    'btn-save-draft'     : 'Save draft',
+    'save-draft-msg'     : 'Draft saved locally on this device.',
+  }
+};
+let currentLang = 'zh';
+
+function _s(key){ return (STRINGS[currentLang]||STRINGS.zh)[key]||(STRINGS.zh)[key]||''; }
+
+function setLang(lang){
+  currentLang = lang;
+  document.documentElement.lang = lang === 'en' ? 'en' : 'zh-TW';
+  try{ localStorage.setItem('propri_lang', lang); }catch(e){}
+  const S = STRINGS[lang]||STRINGS.zh;
+
+  /* ── data-i18n textContent ── */
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const v=S[el.dataset.i18n]; if(v!==undefined) el.textContent=v;
+  });
+  /* ── data-i18n-html innerHTML ── */
+  document.querySelectorAll('[data-i18n-html]').forEach(el=>{
+    const v=S[el.dataset.i18nHtml]; if(v!==undefined) el.innerHTML=v;
+  });
+
+  /* ── hero tagline (innerHTML) ── */
+  const ht=document.getElementById('hero-tagline'); if(ht) ht.innerHTML=S['hero-tagline'];
+
+  /* ── header return button ── */
+  const br=document.getElementById('btn-return'); if(br) br.textContent=S['btn-return'];
+
+  /* ── batch-ph body ── */
+  const bpb=document.querySelector('.batch-ph-body'); if(bpb) bpb.innerHTML=S['batch-ph-body'];
+
+  /* ── header info bar ── */
+  const ib=document.querySelector('#hd [data-i18n="info-bar"]'); if(ib) ib.textContent=S['info-bar'];
+
+  /* ── save pill ── */
+  const st=document.getElementById('save-text'); if(st) st.textContent=S['save-text'];
+
+  /* ── lang button ── */
+  const bl=document.getElementById('btn-lang'); if(bl) bl.textContent=S['btn-lang'];
+
+  /* ── right panel pv-titles ── */
+  document.querySelectorAll('#pv .pv-title').forEach((el,i)=>{ if(S['pv-'+i]) el.textContent=S['pv-'+i]; });
+
+  /* ── step heads ── */
+  for(let n=1;n<=8;n++){
+    const p=document.getElementById('s'+n); if(!p) continue;
+    const t=p.querySelector('.step-title'), e=p.querySelector('.step-en'), to=p.querySelector('.step-tone');
+    if(t&&S['s'+n+'-title']) t.textContent=S['s'+n+'-title'];
+    if(e&&S['s'+n+'-en'])    e.textContent=S['s'+n+'-en'];
+    if(to&&S['s'+n+'-tone']) to.textContent=S['s'+n+'-tone'];
+  }
+
+  /* ── special IDs ── */
+  const idMap={
+    'date-helper':'date-helper','creationMode-helper':'creationMode-helper',
+    'sampleUse-helper':'sampleUse-helper','artworkOwner-helper':'artworkOwner-helper',
+    's5-local-notice':'s5-local-notice','s5-dist-notice':'s5-dist-notice',
+    's6-readiness-label':'s6-readiness-label',
+    's7-preview-title':'s7-preview-title','s7-helper':'s7-helper',
+    's8-disclaimer':'s8-disclaimer',
+    'btn-return':'btn-return','btn-evalReady':'btn-evalReady',
+    'btn-openDoc':'btn-openDoc','btn-back7':'btn-back7','btn-goExport':'btn-goExport',
+    'btn-openDocFull':'btn-openDocFull','btn-exportJSON':'btn-exportJSON',
+    'btn-copyText':'btn-copyText','btn-restart':'btn-restart',
+    /* v3.4.7 new IDs */
+    'next-ver-badge':'next-ver-badge',
+    'doc-bar-title':'doc-bar-title',
+    'doc-btn-print':'doc-btn-print','doc-btn-json':'doc-btn-json',
+    'doc-btn-copy':'doc-btn-copy','doc-btn-close':'doc-btn-close',
+    'doc-meta-generated':'doc-meta-generated',
+    'doc-meta-local':'doc-meta-local','doc-meta-legal':'doc-meta-legal',
+    /* REVISE7 draft IDs */
+    'mode-q-draft'        :'mode-q-draft',
+    'mode-continue-draft' :'mode-continue-draft-label',
+    'mode-new-proof'      :'mode-new-proof-label',
+    'btn-save-draft'      :'btn-save-draft',
+  };
+  // REVISE7b: update save-draft-nav buttons on lang switch
+  document.querySelectorAll('.btn-save-draft-nav').forEach(btn => {
+    btn.textContent = S['btn-save-draft'] || (lang === 'en' ? 'Save draft' : '儲存草稿');
+  });
+  Object.entries(idMap).forEach(([sk,eid])=>{
+    const el=document.getElementById(eid);
+    if(!el) return;
+    const v=S[sk];
+    if(v===undefined) return;
+    if(sk==='s5-local-notice'||sk==='s5-dist-notice') el.innerHTML=v;
+    else el.textContent=v;
+  });
+
+  /* ── placeholders ── */
+  const phMap={
+    'trackTitle':'ph-trackTitle','artistName':'ph-artistName','versionName':'ph-versionName',
+    'genre':'ph-genre','releaseDate':'ph-releaseDate','inspiration':'ph-inspiration',
+    'ideaDate':'ph-ideaDate','production':'ph-production','humanDecisions':'ph-humanDecisions',
+    'artDirection':'ph-artDirection','aiTools':'ph-aiTools','aiParts':'ph-aiParts',
+    'humanRevision':'ph-humanRevision','masterOwner':'ph-masterOwner',
+    'compositionOwner':'ph-compositionOwner','lyricist':'ph-lyricist','composer':'ph-composer',
+    'producer':'ph-producer','performer':'ph-performer','featured':'ph-featured',
+    'splitNotes':'ph-splitNotes','distributor':'ph-distributor','marketingNotes':'ph-marketingNotes',
+    'masterFile':'ph-masterFile','masterFormat':'ph-masterFormat','masterFilePath':'ph-masterFilePath',
+    'masterNotes':'ph-masterNotes','artworkFile':'ph-artworkFile','lyricFile':'ph-lyricFile',
+    'agreementFile':'ph-agreementFile','aiRecord':'ph-aiRecord','distScreenshot':'ph-distScreenshot',
+    'otherProof':'ph-otherProof',
+  };
+  Object.entries(phMap).forEach(([fid,sk])=>{
+    const el=document.getElementById(fid); if(el&&S[sk]) el.placeholder=S[sk];
+  });
+
+  /* ── select options ── */
+  const selOpts={
+    'releaseType':'releaseType-opts','language':'language-opts','creationMode':'creationMode-opts',
+    'sampleUse':'sampleUse-opts','artworkOwner':'artworkOwner-opts','agreementStatus':'agreementStatus-opts',
+    'isrcStatus':'isrcStatus-opts','upcStatus':'upcStatus-opts',
+  };
+  Object.entries(selOpts).forEach(([sid,sk])=>{
+    const sel=document.getElementById(sid); if(!sel) return;
+    const saved=sel.value;
+    const opts=S[sk]; if(!opts) return;
+    sel.innerHTML=opts.map(([v,lbl])=>`<option value="${v}">${lbl}</option>`).join('');
+    sel.value=saved;
+  });
+
+  /* ── STEPS nav rebuild ── */
+  STEPS.forEach((_,i)=>{
+    const n=i+1;
+    STEPS[i].l=S['step-l-'+n]||STEPS[i].l;
+    STEPS[i].n=S['step-n-'+n]||STEPS[i].n;
+  });
+  buildTrack(); buildProg();
+
+  /* ── propri companion message ── */
+  const cm=document.getElementById('c-msg');
+  if(cm) cm.innerHTML=S['msg-idle']||MSGS.idle;
+
+  /* ── step 7 & 8 refresh if visible ── */
+  if(cur===7) buildDocSum();
+  if(cur===8) buildFinal();
+
+  /* ── refreshPV to update pill + completion in new lang ── */
+  refreshPV();
+  /* ── v3.5.0 update credit card labels ── */
+  if(typeof renderCreditCard==='function') renderCreditCard();
+}
+
+function toggleLang(){
+  setLang(currentLang==='zh'?'en':'zh');
+}
+
+const STEPS=[
+  {l:'身份',n:'作品身份'},
+  {l:'故事',n:'創作故事'},
+  {l:'AI',  n:'AI 使用'},
+  {l:'版權',n:'所有權'},
+  {l:'證明',n:'發行前證明'},
+  {l:'整備',n:'發行準備'},
+  {l:'確認',n:'預覽與確認'},
+  {l:'匯出',n:'匯出'},
+];
+let cur=1, D={}, sleepT=null, isSleep=false;
+/* propri typing debounce — prevents per-keystroke PNG swap */
+let _typingTimer=null, _propriTyping=false;
+
+function load(){
+  try{const s=localStorage.getItem('propri_v346');if(s)D=JSON.parse(s);}catch(e){}
+  document.querySelectorAll('[data-k]').forEach(el=>{
+    const k=el.dataset.k;
+    if(D[k]!==undefined) el.type==='checkbox'?el.checked=D[k]:el.value=D[k];
+  });
+  rebuildChips(); /* restore file picker chips from saved filenames */
+}
+function save(){
+  document.querySelectorAll('[data-k]').forEach(el=>{
+    D[el.dataset.k]=el.type==='checkbox'?el.checked:el.value;
+  });
+  // REVISE7: draft NOT auto-saved — use saveDraftNow() button only
+  refreshPV();
+}
+
+/* ════════════════════════════════════════════
+   WELCOME
+════════════════════════════════════════════ */
+/* ════════════════════════════════════════════
+   LANDING MODE PICKER
+════════════════════════════════════════════ */
+function pickMode(m){
+  if(m === 'batch'){
+    document.getElementById('mode-single').classList.remove('selected');
+    document.getElementById('mode-batch').classList.add('selected');
+    document.getElementById('mode-pick').style.display='none';
+    document.getElementById('batch-ph').classList.add('show');
+    try{ localStorage.setItem('propri_batchMode','true'); }catch(e){}
+    return;
+  }
+  /* single-song mode → go straight into journal */
+  document.getElementById('mode-single').classList.add('selected');
+  try{ localStorage.setItem('propri_batchMode','false'); }catch(e){}
+  startJournal();
+}
+function resetMode(){
+  document.getElementById('batch-ph').classList.remove('show');
+  document.getElementById('mode-pick').style.display='flex';
+  document.getElementById('mode-single').classList.remove('selected');
+  document.getElementById('mode-batch').classList.remove('selected');
+}
+function returnToLanding(){
+  const confirmed = confirm(_s('confirm-return'));
+  if(!confirmed) return;
+  /* show welcome, hide app — data is preserved in localStorage */
+  const app=document.getElementById('app');
+  const wel=document.getElementById('welcome');
+  app.style.opacity='0';
+  setTimeout(()=>{
+    app.style.opacity='0';
+    wel.style.display='flex';
+    wel.style.opacity='0';
+    requestAnimationFrame(()=>{ wel.style.opacity='1'; });
+    wel.classList.remove('out');
+    resetMode();
+  },300);
+  setTimeout(()=>{ wel.style.opacity='1'; },350);
+}
+
+/* ── REVISE7: Draft management ─────────────────────────────────────── */
+
+function checkWelcomeDraftState(){
+  try {
+    const raw = localStorage.getItem('propri_v346');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const hasData = parsed && Object.values(parsed).some(v =>
+        v !== '' && v !== false && v !== null && v !== undefined
+      );
+      if (hasData) {
+        document.getElementById('mode-pick').style.display = 'none';
+        document.getElementById('mode-pick-draft').style.display = '';
+        return;
+      }
+    }
+  } catch(e){}
+  document.getElementById('mode-pick').style.display = '';
+  document.getElementById('mode-pick-draft').style.display = 'none';
+}
+
+function continueDraft(){
+  document.getElementById('mode-pick-draft').style.display = 'none';
+  startJournal();
+}
+
+function startNewProof(){
+  const isEn = currentLang === 'en';
+  const msg = isEn
+    ? 'Start a new proof? Your saved draft will be cleared.'
+    : '建立新的 proof？已儲存的草稿將會清除。';
+  if (!confirm(msg)) return;
+  // 1. Clear localStorage draft
+  try { localStorage.removeItem('propri_v346'); } catch(e){}
+  // 2. Reset in-memory D
+  D = {};
+  // 3. Clear all [data-k] DOM fields immediately (before transition)
+  document.querySelectorAll('[data-k]').forEach(el => {
+    if (el.type === 'checkbox') el.checked = false;
+    else el.value = '';
+  });
+  // 4. Clear file chip DOM (rebuildChips will also run in load())
+  if (typeof FILE_FIELDS !== 'undefined') {
+    FILE_FIELDS.forEach(fid => {
+      const chip = document.getElementById('chip-' + fid);
+      if (chip) { chip.classList.remove('show'); chip.innerHTML = ''; }
+      const inp = document.getElementById(fid);
+      if (inp) inp.style.display = '';
+    });
+  }
+  // 5. Hide save-draft-msg immediately
+  const msgEl = document.getElementById('save-draft-msg');
+  if (msgEl) msgEl.style.display = 'none';
+  // 6. Navigate
+  document.getElementById('mode-pick-draft').style.display = 'none';
+  startJournal();
+}
+
+function saveDraftNow(){
+  document.querySelectorAll('[data-k]').forEach(el => {
+    D[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  try { localStorage.setItem('propri_v346', JSON.stringify(D)); } catch(e){}
+  showDraftSavedMsg();
+}
+
+function showDraftSavedMsg(){
+  // REVISE7b: use toast() — layout-safe, no sidebar disruption
+  const msg = (typeof _s === 'function' ? _s('save-draft-msg') : null)
+             || (currentLang === 'en' ? 'Draft saved locally.' : '草稿已儲存在此裝置。');
+  if (typeof toast === 'function') toast(msg);
+  // Also update DOM msg for backward compat (may be hidden)
+  const msgEl = document.getElementById('save-draft-msg');
+  if (msgEl) { msgEl.style.display = 'inline'; setTimeout(() => { msgEl.style.display = 'none'; }, 2200); }
+}
+
+/* ── END REVISE7 draft management ───────────────────────────────────── */
+
+/* ── REVISE7b: Inject Save Draft into every step-nav ─────────────────── */
+function injectSaveDraftButtons(){
+  document.querySelectorAll('.step-nav').forEach(nav => {
+    if (nav.querySelector('.btn-save-draft-nav')) return; // already done
+    const btn = document.createElement('button');
+    btn.className = 'btn-save-draft-nav';
+    btn.setAttribute('data-i18n-nav', 'btn-save-draft');
+    btn.textContent = (typeof _s === 'function' ? _s('btn-save-draft') : null)
+                      || (currentLang === 'en' ? 'Save draft' : '儲存草稿');
+    btn.onclick = function(){ saveDraftNow(); };
+    const kids = [...nav.children];
+    if (kids.length >= 1) {
+      nav.insertBefore(btn, kids[kids.length - 1]);
+    } else {
+      nav.appendChild(btn);
+    }
+  });
+}
+/* ── END injectSaveDraftButtons ─────────────────────────────────────── */
+
+function startJournal(){
+  document.getElementById('welcome').classList.add('out');
+  setTimeout(()=>{
+    document.getElementById('welcome').style.display='none';
+    document.getElementById('app').style.opacity='1';
+  },750);
+  buildTrack(); load(); buildProg(); refreshPV();
+  document.querySelectorAll('[data-k]').forEach(el=>{
+    el.addEventListener('input', ()=>{ save(); onActive(); });
+    el.addEventListener('change',()=>{ save(); onActive(); });
+  });
+  document.addEventListener('mousemove',()=>{ resetSleep(); if(isSleep) wakeUp(); });
+  document.addEventListener('keydown',  ()=>{ resetSleep(); if(isSleep) wakeUp(); });
+  /* restore saved language preference */
+  try{ const sl=localStorage.getItem('propri_lang'); if(sl==='en'||sl==='zh') currentLang=sl; }catch(e){}
+  setLang(currentLang);
+  // checkWelcomeDraftState moved to DOMContentLoaded (REVISE7a)
+  renderCreditCard();   /* v3.5.0 init credit display */
+  // REVISE7b: inject Save Draft button into step-nav rows (replaces #save-draft-area)
+  injectSaveDraftButtons();
+  setState('entry');
+  setTimeout(()=>setState('idle'),3000);
+  resetSleep();
+}
+
+/* ════════════════════════════════════════════
+   PROGRESS NAV
+════════════════════════════════════════════ */
+function buildTrack(){
+  const row=document.getElementById('steps-row');
+  row.innerHTML='';
+  STEPS.forEach((s,i)=>{
+    const n=i+1;
+    const div=document.createElement('div');
+    div.className='stp';
+    div.innerHTML=`
+      <div class="stp-dot ${n===cur?'active':''}" id="sd${n}" onclick="jumpTo(${n})" title="${s.n}">${n<cur?'✓':n}</div>
+      <div class="stp-label ${n===cur?'on':''}" id="sl${n}">${s.l}</div>
+      ${n<STEPS.length?`<div class="stp-line ${n<cur?'done':''}" id="sln${n}"></div>`:''}
+    `;
+    row.appendChild(div);
+  });
+}
+function refreshTrack(){
+  STEPS.forEach((_,i)=>{
+    const n=i+1;
+    const d=document.getElementById('sd'+n);
+    if(!d)return;
+    d.className='stp-dot'+(n===cur?' active':n<cur?' done':'');
+    d.textContent=n<cur?'✓':String(n);
+    const l=document.getElementById('sl'+n);
+    if(l) l.className='stp-label'+(n===cur?' on':'');
+    const ln=document.getElementById('sln'+n);
+    if(ln) ln.className='stp-line'+(n<cur?' done':'');
+  });
+}
+
+/* ════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════ */
+function go(from, validate){
+  if(validate && from===1){
+    const t=document.getElementById('trackTitle').value.trim();
+    const a=document.getElementById('artistName').value.trim();
+    if(!t||!a){ document.getElementById('n1').classList.add('show'); setState('missing'); return; }
+    document.getElementById('n1').classList.remove('show');
+  }
+  save(); goTo(from+1); triggerComplete();
+}
+function back(from){ save(); goTo(from-1); }
+function jumpTo(n){ save(); goTo(n); }
+function goTo(n){
+  const leaving=document.querySelector('.step-panel.active');
+  if(leaving) leaving.classList.remove('active');
+  const arriving=document.getElementById('s'+n);
+  // force animation replay by briefly removing then re-adding the class
+  arriving.classList.remove('active');
+  void arriving.offsetWidth; // reflow
+  arriving.classList.add('active');
+  cur=n; refreshTrack(); buildProg();
+  document.getElementById('mn').scrollTop=0;
+  if(n===7) buildDocSum();
+  if(n===8) buildFinal();
+}
+function evalReady(){
+  save();
+  const r=calcReady();
+  document.getElementById('read-result').style.display='block';
+  document.getElementById('r-chip').innerHTML=`<span class="r-chip ${r.cls}">${r.lbl}</span>`;
+  document.getElementById('r-detail').textContent=r.detail;
+  setState(r.cls==='ready'?'export-ready':'missing');
+  goTo(7);
+}
+function calcCompletion(){
+  const d=D;
+  if(!d.trackTitle && !d.artistName) return {pct:0, level:'none', lbl:_s('cq-none-lbl'), hint:_s('cq-none-hint'), cls:''};
+  const fields=[d.creationMode,d.humanDecisions,d.aiTools,d.humanRevision,d.masterOwner,d.compositionOwner,d.sampleUse,d.artworkOwner,d.agreementStatus,d.humanControlConfirm,d.masterFile,d.artworkFile,d.lyricFile,d.aiRecord];
+  const filled=fields.filter(v=>v&&v!=='').length;
+  const pct=Math.round((filled/fields.length)*100);
+  if(filled<=3) return{pct,level:'basic',  lbl:_s('cq-basic-lbl'),  hint:_s('cq-basic-hint'),  cls:'cq-basic'};
+  if(filled<=8) return{pct,level:'suggest', lbl:_s('cq-suggest-lbl'),hint:_s('cq-suggest-hint'),cls:'cq-suggest'};
+  return{pct,level:'high', lbl:_s('cq-high-lbl'), hint:_s('cq-high-hint'), cls:'cq-high'};
+}
+
+function calcReady(){
+  const d=D;
+  const isEn=(typeof currentLang!=='undefined'&&currentLang==='en');
+  const miss=(label)=>isEn
+    ?'Required field empty: '+label.split(' / ')[1]
+    :'必填欄位尚未填寫：'+label.split(' / ')[0];
+  /* Step 1 — Work Identity: all 7 required */
+  const S1=[
+    ['trackTitle','曲名 / Track Title'],['artistName','演出者 / Artist Name'],
+    ['releaseType','發行類型 / Release Type'],['versionName','版本名稱 / Version Name'],
+    ['language','語言 / Language'],['genre','風格情感 / Genre & Mood'],
+    ['releaseDate','預計發行日期 / Release Date'],
+  ];
+  for(const [k,label] of S1){
+    if(!d[k]||!String(d[k]).trim())
+      return{cls:'missing',lbl:_s('chip-missing'),detail:miss(label)};
+  }
+  /* Step 4 — Ownership: all 10 required */
+  const S4=[
+    ['masterOwner','母帶所有人 / Master Owner'],
+    ['compositionOwner','曲目所有人 / Composition Owner'],
+    ['lyricist','作詞者 / Lyricist'],['composer','作曲者 / Composer'],
+    ['producer','製作人 / Producer'],['performer','演出者主唱 / Performer'],
+    ['featured','特邀藝人 / Featured Artist (None if N/A)'],
+    ['splitNotes','版稅分配 / Royalty Split'],
+    ['sampleUse','取樣使用 / Rights Usage'],['artworkOwner','封面版權 / Artwork Rights'],
+  ];
+  for(const [k,label] of S4){
+    if(!d[k]||!String(d[k]).trim())
+      return{cls:'missing',lbl:_s('chip-missing'),detail:miss(label)};
+  }
+  /* Existing highrisk/review logic — checked after required fields pass */
+  if(d.sampleUse==='uncleared'||d.sampleUse==='unknown')
+    return{cls:'highrisk',lbl:_s('chip-highrisk'),detail:_s('ready-highrisk-sample')};
+  if(d.artworkOwner==='needs-supplement')
+    return{cls:'review',lbl:_s('chip-review'),detail:_s('ready-review-artwork')};
+  const featuredVal=String(d.featured||'').trim().toLowerCase();
+  const featuredFilled=featuredVal&&featuredVal!=='none'&&featuredVal!=='無'&&featuredVal!=='n/a';
+  if(featuredFilled&&!d.splitNotes?.trim())
+    return{cls:'highrisk',lbl:_s('chip-highrisk'),detail:_s('ready-highrisk-featured')};
+  const n=[d.coverReady,d.lyricsReady,d.aiDisclosureReady,d.rightsProofReady,d.explicitOk].filter(Boolean).length;
+  if(n<3) return{cls:'review',lbl:_s('chip-review'),detail:_s('ready-review-checklist').replace('%n',n)};
+  return{cls:'ready',lbl:_s('chip-ready'),detail:_s('ready-ready')};
+}
+
+/* ════════════════════════════════════════════
+   PROGRESS LIST
+════════════════════════════════════════════ */
+function buildProg(){
+  document.getElementById('prog-list').innerHTML=
+    STEPS.map((s,i)=>{
+      const n=i+1;
+      const cls=n<cur?'done':n===cur?'current':'';
+      return`<div class="prog-item ${cls}" onclick="jumpTo(${n})"><div class="prog-dot"></div><span>${s.n}</span></div>`;
+    }).join('');
+}
+
+/* ════════════════════════════════════════════
+   RIGHT PANEL
+════════════════════════════════════════════ */
+function refreshPV(){
+  const d=D;
+  const states=[
+    d.trackTitle&&d.artistName,
+    d.humanDecisions,
+    d.humanControlConfirm,
+    d.masterOwner&&d.compositionOwner,
+    d.masterFile||d.artworkFile||d.lyricFile,
+    d.coverReady||d.lyricsReady||d.rightsProofReady,
+  ];
+  document.querySelectorAll('#pv-rl .rl-row').forEach((r,i)=>{
+    r.className='rl-row '+(states[i]?'ok':'miss');
+    r.querySelector('.ri').textContent=states[i]?'✓':'○';
+  });
+  const done=states.filter(Boolean).length;
+  const pill=document.getElementById('ov-pill');
+  if(!done){      pill.style.cssText='background:rgba(255,255,255,.04);color:rgba(255,255,255,.28);'; pill.textContent=_s('ov-none');}
+  else if(done<3){pill.style.cssText='background:rgba(255,189,89,.1);color:#ffbd59;';                 pill.textContent=_s('ov-progress')+done+'/6';}
+  else if(done<6){pill.style.cssText='background:rgba(167,139,250,.12);color:#A78BFA;';               pill.textContent=_s('ov-mostly')+done+'/6';}
+  else{           pill.style.cssText='background:rgba(72,199,142,.13);color:#48c78e;';               pill.textContent=_s('ov-ready');}
+  const cq=calcCompletion();
+  const cqLbl=document.getElementById('cq-label');
+  const cqBar=document.getElementById('cq-bar');
+  const cqHint=document.getElementById('cq-hint');
+  if(cqLbl){
+    cqLbl.textContent=cq.lbl;
+    cqLbl.className='cq-label '+cq.cls;
+    cqBar.style.width=cq.pct+'%';
+    cqHint.textContent=cq.hint;
+  }
+}
+
+/* ════════════════════════════════════════════
+   DOCUMENT
+════════════════════════════════════════════ */
+function buildDocSum(){
+  const d=D;
+  document.getElementById('doc-sum').innerHTML=`
+    <b>${_s('ds-title')}</b>${d.trackTitle||'—'}<br>
+    <b>${_s('ds-artist')}</b>${d.artistName||'—'}<br>
+    <b>${_s('ds-release')}</b>${d.releaseType||'—'} ${d.language?'· '+d.language:''}<br><br>
+    <b>${_s('ds-decisions')}</b>${d.humanDecisions?d.humanDecisions.substring(0,100)+'…':_s('ds-unfilled')}<br>
+    <b>${_s('ds-aitools')}</b>${d.aiTools||_s('ds-none')}<br>
+    <b>${_s('ds-declaration')}</b>${d.humanControlConfirm?_s('ds-confirmed'):_s('ds-pending')}<br><br>
+    <b>${_s('ds-master')}</b>${d.masterOwner||'—'}<br>
+    <b>${_s('ds-sample')}</b>${{'none':_s('su-none'),'cleared':_s('su-cleared'),'uncleared':_s('su-uncleared'),'unknown':_s('su-unknown')}[d.sampleUse]||d.sampleUse||'—'}
+  `;
+}
+function buildFinal(){
+  const d=D, t=d.trackTitle||(currentLang==='en'?'Untitled':'作品'), dt=new Date().toISOString().slice(0,10);
+  document.getElementById('final-name').textContent=t+_s('final-ready');
+  document.getElementById('final-fn').textContent=`AI_Music_Proof_of_Rights_${t}_${dt}`;
+}
+function buildFullDoc(){
+  const d=D;
+  const locale=currentLang==='en'?'en-US':'zh-TW';
+  document.getElementById('d-date').textContent=new Date().toLocaleDateString(locale);
+  document.getElementById('d-title').textContent=(d.trackTitle?d.trackTitle+' — ':'')+' Proof-of-Rights Document';
+  document.getElementById('d-sub').textContent=(d.artistName||(currentLang==='en'?'Unknown Artist':'未知演出者'))+(d.releaseType?' · '+d.releaseType:'');
+  /* doc overlay static strings */
+  const bl=document.querySelector('.doc-brandline'); if(bl) bl.textContent=_s('doc-brandline');
+  const dc=document.querySelector('.doc-disclaimer'); if(dc) dc.textContent=_s('doc-disclaimer');
+  const df=document.querySelector('.doc-footer'); if(df) df.textContent=_s('doc-footer');
+  /* AI scope labels */
+  const ai=[d.aiLyrics&&_s('ai-lyrics'),d.aiVocals&&_s('ai-vocals'),d.aiComposition&&_s('ai-composition'),d.aiArtwork&&_s('ai-artwork')].filter(Boolean);
+  const sep=currentLang==='en'?', ':'、';
+  const cmMap={'fully-human':_s('cm-fully-human'),'ai-assist':_s('cm-ai-assist'),'ai-draft-human-rework':_s('cm-ai-draft-human-rework'),'ai-collab':_s('cm-ai-collab'),'fully-ai':_s('cm-fully-ai')};
+  const y=_s('dr-yes'), n=_s('dr-no');
+  document.getElementById('d-body').innerHTML=`
+    <div class="doc-section"><h3>${_s('doc-s1')}</h3>
+      ${dr(_s('dr-trackTitle'),d.trackTitle)}${dr(_s('dr-artistName'),d.artistName)}${dr(_s('dr-releaseType'),d.releaseType)}${dr(_s('dr-versionName'),d.versionName)}${dr(_s('dr-language'),d.language)}${dr(_s('dr-genre'),d.genre)}${dr(_s('dr-releaseDate'),d.releaseDate)}
+    </div>
+    <div class="doc-section"><h3>${_s('doc-s2')}</h3>
+      ${dr(_s('dr-creationMode'),cmMap[d.creationMode]||d.creationMode||'—')}${dr(_s('dr-inspiration'),d.inspiration)}${dr(_s('dr-ideaDate'),d.ideaDate)}${dr(_s('dr-production'),d.production)}${dr(_s('dr-artDirection'),d.artDirection)}
+    </div>
+    <div class="doc-section"><h3>${_s('doc-s3')}</h3>
+      ${dr(_s('dr-humanDecisions'),d.humanDecisions)}${dr(_s('dr-humanControlConfirm'),d.humanControlConfirm?_s('dr-confirmed'):_s('dr-unconfirmed'))}
+    </div>
+    <div class="doc-section"><h3>${_s('doc-s4')}</h3>
+      ${dr(_s('dr-aiTools'),d.aiTools||_s('dr-aiNone'))}${dr(_s('dr-aiScope'),ai.length?ai.join(sep):_s('dr-aiNone'))}${dr(_s('dr-aiParts'),d.aiParts)}${dr(_s('dr-humanRevision'),d.humanRevision)}
+    </div>
+    <div class="doc-section"><h3>${_s('doc-s5')}</h3>
+      ${dr(_s('dr-masterOwner'),d.masterOwner)}${dr(_s('dr-compositionOwner'),d.compositionOwner)}${dr(_s('dr-lyricist'),d.lyricist)}${dr(_s('dr-composer'),d.composer)}${dr(_s('dr-producer'),d.producer)}${dr(_s('dr-performer'),d.performer)}${dr(_s('dr-featured'),d.featured)}${dr(_s('dr-splitNotes'),d.splitNotes)}${dr(_s('dr-artworkOwner'),{'self':_s('ao-self'),'ai-self':_s('ao-ai-self'),'licensed':_s('ao-licensed'),'needs-supplement':_s('ao-needs-supplement')}[d.artworkOwner]||d.artworkOwner)}${dr(_s('dr-sampleUse'),{'none':_s('su-none'),'cleared':_s('su-cleared'),'uncleared':_s('su-uncleared'),'unknown':_s('su-unknown')}[d.sampleUse]||d.sampleUse)}${dr(_s('dr-agreementStatus'),{'all-signed':_s('as-all-signed'),'verbal':_s('as-verbal'),'pending':_s('as-pending'),'na':_s('as-na')}[d.agreementStatus]||d.agreementStatus)}
+    </div>
+    <div class="doc-section"><h3>${_s('doc-s6')}</h3>
+      ${dr(_s('dr-masterFile'),d.masterFile)}${dr(_s('dr-masterFormat'),d.masterFormat)}${dr(_s('dr-masterFilePath'),d.masterFilePath)}${dr(_s('dr-masterNotes'),d.masterNotes)}${dr(_s('dr-artworkFile'),d.artworkFile)}${dr(_s('dr-lyricFile'),d.lyricFile)}${dr(_s('dr-agreementFile'),d.agreementFile)}${dr(_s('dr-aiRecord'),d.aiRecord)}${dr(_s('dr-distScreenshot'),d.distScreenshot)}${dr(_s('dr-otherProof'),d.otherProof)}
+    </div>
+    <div class="doc-section"><h3>${_s('doc-s7')}</h3>
+      ${dr(_s('dr-distributor'),d.distributor)}${dr(_s('dr-isrcStatus'),{'obtained':_s('is-obtained'),'pending':_s('is-pending'),'na':_s('is-na')}[d.isrcStatus]||d.isrcStatus)}${dr(_s('dr-upcStatus'),{'obtained':_s('is-obtained'),'pending':_s('is-pending'),'na':_s('is-na')}[d.upcStatus]||d.upcStatus)}${dr(_s('dr-lyricsReady'),d.lyricsReady?y:n)}${dr(_s('dr-coverReady'),d.coverReady?y:n)}${dr(_s('dr-aiDisclosureReady'),d.aiDisclosureReady?y:n)}${dr(_s('dr-rightsProofReady'),d.rightsProofReady?y:n)}
+    </div>
+    <div class="doc-section"><h3>${_s('doc-s8')}</h3>
+      <p style="font-size:13.5px;color:#555;line-height:1.8;">${_s('doc-privacy-note')}</p>
+    </div>
+  `;
+}
+function dr(k,v){ if(!v) return ''; return `<div class="doc-row"><span class="dk">${k}</span><span class="dv">${v}</span></div>`; }
+function openDoc(){
+  buildFullDoc();
+  document.getElementById('doc-overlay').classList.add('show');
+  // REVISE7a: clear saved draft when user prints (after print dialog closes)
+  window.onafterprint = function() {
+    try { localStorage.removeItem('propri_v346'); } catch(e){}
+    window.onafterprint = null; // reset handler
+  };
+}
+function closeDoc(){ document.getElementById('doc-overlay').classList.remove('show'); }
+
+/* ════════════════════════════════════════════
+   EXPORT
+════════════════════════════════════════════ */
+function exportJSON(){
+  const t=D.trackTitle||'untitled', dt=new Date().toISOString().slice(0,10);
+  const blob=new Blob([JSON.stringify({generator:'propri · AI Music Proof-of-Rights Generator v3.4',generated:new Date().toISOString(),local_only:true,data:D},null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`AI_Music_Proof_of_Rights_${t}_${dt}.json`; a.click();
+  // REVISE7: clear saved draft after export (D stays in memory)
+  try { localStorage.removeItem('propri_v346'); } catch(e){}
+  toast(_s('toast-json'));
+}
+function copyText(){
+  const d=D;
+  navigator.clipboard.writeText(`AI Music Proof-of-Rights — ${d.trackTitle||'—'}\n${_s('copy-artist')}${d.artistName||'—'}\n${_s('copy-release')}${d.releaseType||'—'}\n${_s('copy-master')}${d.masterOwner||'—'}\n${_s('copy-aitools')}${d.aiTools||_s('copy-none')}\n${_s('copy-generated')}${new Date().toLocaleString()}\npropri v3.4.8 · Local-First`)
+    .then(()=>{ try{localStorage.removeItem('propri_v346');}catch(e){} toast(_s('toast-copy')); }).catch(()=>toast(_s('toast-copy-fail'))); // REVISE7
+}
+function restart(){
+  if(!confirm(_s('confirm-restart'))) return;
+  localStorage.removeItem('propri_v346'); D={};
+  document.querySelectorAll('[data-k]').forEach(el=>{ el.type==='checkbox'?el.checked=false:el.value=''; });
+  goTo(1); setState('idle'); refreshPV();
+}
+
+/* ════════════════════════════════════════════
+   propri STATE SYSTEM
+   GOVERNANCE: CSS class switches image visibility.
+   Do not change the img src or rebuild SVG.
+════════════════════════════════════════════ */
+const MSGS = {
+  entry:        ()=>_s('msg-entry'),
+  idle:         ()=>_s('msg-idle'),
+  focus:        ()=>_s('msg-focus'),
+  complete:     ()=>_s('msg-complete'),
+  missing:      ()=>_s('msg-missing'),
+  sleep:        ()=>_s('msg-sleep'),
+  wake:         ()=>_s('msg-wake'),
+  'export-ready':()=>_s('msg-export-ready'),
+  done:         ()=>_s('msg-done'),
+};
+
+/* image map per state */
+const STATE_IMG = {
+  entry:         'img-main',
+  idle:          'img-main',
+  focus:         'img-focus',
+  complete:      'img-main',
+  missing:       'img-focus',
+  sleep:         'img-side',
+  wake:          'img-main',
+  'export-ready':'img-main',
+  done:          'img-main',
+};
+/* CSS class map */
+const STATE_CLASS = {
+  entry:         'propri-state-idle',
+  idle:          'propri-state-idle',
+  focus:         'propri-state-focus',
+  complete:      'propri-state-celebrate',
+  missing:       'propri-state-focus',
+  sleep:         'propri-state-sleep',
+  wake:          'propri-state-idle',
+  'export-ready':'propri-state-celebrate',
+  done:          'propri-state-celebrate',
+};
+
+function setState(s){
+  const stage=document.getElementById('propriStage');
+  const msg=document.getElementById('c-msg');
+
+  /* update message */
+  if(msg) msg.innerHTML=(typeof MSGS[s]==='function'?MSGS[s]():(typeof MSGS.idle==='function'?MSGS.idle():MSGS.idle));
+
+  /* swap image visibility */
+  document.querySelectorAll('.propri-img-wrap img').forEach(img=>img.classList.remove('visible'));
+  const targetId=STATE_IMG[s]||'img-main';
+  const targetImg=document.getElementById(targetId);
+  if(targetImg) targetImg.classList.add('visible');
+
+  /* update animation class */
+  stage.className='propri-stage '+(STATE_CLASS[s]||'propri-state-idle');
+  isSleep=(s==='sleep');
+}
+
+function triggerComplete(){
+  setState('complete');
+  const burst=document.getElementById('sparkBurst');
+  burst.classList.add('pop');
+  setTimeout(()=>{ burst.classList.remove('pop'); setState('idle'); }, 1000);
+}
+
+function resetSleep(){
+  clearTimeout(sleepT);
+  sleepT=setTimeout(()=>setState('sleep'), 110000);
+}
+function wakeUp(){
+  setState('wake');
+  setTimeout(()=>setState('focus'), 2200);
+}
+function onActive(){
+  resetSleep();
+  if(isSleep){ wakeUp(); return; }
+  /* Debounced focus — only enter focus state once per typing burst,
+     not on every keystroke. Returns to idle 2.5s after last input. */
+  if(!_propriTyping){
+    _propriTyping=true;
+    setState('focus');
+  }
+  clearTimeout(_typingTimer);
+  _typingTimer=setTimeout(()=>{
+    _propriTyping=false;
+    if(!isSleep) setState('idle');
+  }, 2500);
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('in');
+  setTimeout(()=>t.classList.remove('in'),3200);
+}
+
+/* ════════════════════════════════════════════
+   LOCAL FILE PICKER  — v3.4
+   Governance: reads only file.name + file.size
+   No FileReader, no content access, no upload.
+════════════════════════════════════════════ */
+const FILE_FIELDS = ['artworkFile','lyricFile','agreementFile','aiRecord','distScreenshot'];
+
+function formatFileSize(b){
+  if(!b || b===0) return '';
+  if(b<1024)      return b+'B';
+  if(b<1048576)   return (b/1024).toFixed(1)+'KB';
+  return (b/1048576).toFixed(1)+'MB';
+}
+
+function pickFile(inputEl, fieldId){
+  const file = inputEl.files[0];
+  if(!file) return;
+
+  /* Store name in backing text input */
+  const nameInput = document.getElementById(fieldId);
+  if(nameInput) nameInput.value = file.name;
+
+  /* Store size for display (key: fieldId+'Size') */
+  D[fieldId+'Size'] = formatFileSize(file.size);
+
+  _showChip(fieldId, file.name, D[fieldId+'Size']);
+  save();
+}
+
+function _showChip(fieldId, name, sizeStr){
+  const chip = document.getElementById('chip-'+fieldId);
+  if(!chip) return;
+  const safe = name.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  chip.innerHTML =
+    `<span class="fp-name" title="${safe}">${safe}</span>`+
+    (sizeStr ? `<span class="fp-sep">·</span><span class="fp-size">${sizeStr}</span>` : '')+
+    `<span class="fp-local-badge">${_s("chip-local-badge")}</span>`+
+    `<button type="button" class="fp-rm" onclick="clearFile('${fieldId}')">${_s("chip-remove")}</button>`;
+  chip.classList.add('show');
+  /* hide manual text input while chip visible */
+  const inp = document.getElementById(fieldId);
+  if(inp) inp.style.display='none';
+}
+
+function clearFile(fieldId){
+  const chip = document.getElementById('chip-'+fieldId);
+  if(chip){ chip.classList.remove('show'); chip.innerHTML=''; }
+  const inp = document.getElementById(fieldId);
+  if(inp){ inp.value=''; inp.style.display=''; }
+  const fi = document.getElementById('fi-'+fieldId);
+  if(fi) fi.value='';
+  delete D[fieldId+'Size'];
+  save();
+}
+
+function rebuildChips(){
+  /* On load from localStorage: restore chips for any stored filenames */
+  FILE_FIELDS.forEach(fid=>{
+    const val = D[fid];
+    if(val && val.trim()){
+      _showChip(fid, val.trim(), D[fid+'Size']||'');
+    }
+  });
+}
+
+
+/* ════════════════════════════════════════════
+   v3.5.0 CreditGate — Credit System Prototype
+   README: localStorage credit gating is
+   prototype-only and not secure for
+   production monetization.
+════════════════════════════════════════════ */
+
+/* Demo whitelist — only these exact codes are valid */
+/* Redemption codes are configured in private builds only.
+   Do not commit live redemption codes to a public repository.
+   See your deployment guide for private code configuration. */
+const DEMO_CODES = {};
+
+/* Portaly purchase page (placeholder) */
+const PORTALY_URL = 'https://portaly.cc/kaola';
+
+/* ── localStorage helpers ── */
+function _cgGet(key, def){
+  try{ const v=localStorage.getItem(key); return v===null?def:JSON.parse(v); }catch(e){ return def; }
+}
+function _cgSet(key, val){
+  try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+}
+function getCreditState(){
+  return {
+    trialUsed:     _cgGet('kaola_proof_trial_used', false),
+    balance:       _cgGet('kaola_proof_credit_balance', 0),
+    redeemedCodes: _cgGet('kaola_proof_redeemed_codes', [])
+  };
+}
+
+/* ── Render credit status line in #mn (REVISE3) ── */
+function renderCreditCard(){
+  const { trialUsed, balance } = getCreditState();
+  const isEn = currentLang === 'en';
+
+  /* trial label + value */
+  const trialLabel = document.getElementById('cs-trial-label');
+  const trialVal   = document.getElementById('cs-trial-val');
+  if(trialLabel) trialLabel.textContent = isEn ? 'Free trial' : '免費試用';
+  if(trialVal){
+    if(!trialUsed){
+      trialVal.textContent = isEn ? 'Available' : '可使用';
+      trialVal.classList.remove('used');
+    } else {
+      trialVal.textContent = isEn ? 'Used' : '已使用';
+      trialVal.classList.add('used');
+    }
+  }
+
+  /* balance label + value */
+  const balLabel = document.getElementById('cs-balance-label');
+  const balVal   = document.getElementById('cs-balance-val');
+  if(balLabel) balLabel.textContent = isEn ? 'Credits' : '剩餘點數';
+  if(balVal)   balVal.textContent   = balance;
+
+  /* action buttons */
+  const crdBuy    = document.getElementById('crd-btn-buy');
+  const crdRedeem = document.getElementById('crd-btn-redeem');
+  if(crdBuy)    crdBuy.textContent    = isEn ? 'Buy credits' : '購買點數';
+  if(crdRedeem) crdRedeem.textContent = isEn ? 'Redeem code' : '兌換碼';
+}
+
+/* ── Export gate ── */
+function gateExport(callback){
+  const { trialUsed, balance } = getCreditState();
+  if(!trialUsed){
+    /* allow free trial */
+    _cgSet('kaola_proof_trial_used', true);
+    _cgSet('kaola_proof_last_export_at', new Date().toISOString());
+    renderCreditCard();
+    callback();
+  } else if(balance > 0){
+    /* deduct 1 credit */
+    _cgSet('kaola_proof_credit_balance', balance - 1);
+    _cgSet('kaola_proof_last_export_at', new Date().toISOString());
+    renderCreditCard();
+    callback();
+  } else {
+    /* no credits — show purchase gate */
+    openGateModal();
+  }
+}
+
+/* Gated wrappers for s8 buttons */
+/* ── v3.5.0 REVISE5 — Export readiness guard ──
+   checkExportReady() must return true before gateExport() is called.
+   If not ready: show inline warning, no download, no credit deduction, no trial use.
+*/
+function checkExportReady(){
+  const isEn = currentLang === 'en';
+
+  /* Blank check: track title AND artist name both empty → definitely blank */
+  const isBlank = !D.trackTitle?.trim() && !D.artistName?.trim();
+
+  /* Readiness check: calcReady() must return cls:'ready' */
+  const r = calcReady();
+  const notReady = isBlank || r.cls !== 'ready';
+
+  if(notReady){
+    const warn = document.getElementById('s8-export-warn');
+    if(warn){
+      warn.textContent = isEn
+        ? '⚠ Please complete the required proof information before exporting.'
+        : '⚠ 請先完成必要的 proof 資料後再匯出。';
+      warn.style.display = 'block';
+      /* force reflow then fade in */
+      warn.getBoundingClientRect();
+      warn.style.opacity = '1';
+      clearTimeout(warn._hideTimer);
+      warn._hideTimer = setTimeout(()=>{
+        warn.style.opacity = '0';
+        setTimeout(()=>{ warn.style.display = 'none'; }, 320);
+      }, 3800);
+    }
+    return false;
+  }
+  return true;
+}
+
+function gatedOpenDoc(){   if(!checkExportReady()) return; gateExport(()=>openDoc()); }
+function gatedExportJSON(){ if(!checkExportReady()) return; gateExport(()=>exportJSON()); }
+function gatedCopyText(){  if(!checkExportReady()) return; gateExport(()=>copyText()); }
+
+/* ── Redeem Modal ── */
+function openRedeemModal(){
+  const overlay = document.getElementById('redeem-overlay');
+  const input   = document.getElementById('rdm-input');
+  const msg     = document.getElementById('rdm-msg');
+  if(!overlay) return;
+  input.value = '';
+  input.classList.remove('invalid','valid');
+  msg.textContent = ''; msg.className = 'cg-msg';
+  _updateRedeemLang();
+  overlay.classList.add('show');
+  setTimeout(()=>input.focus(), 80);
+}
+function closeRedeemModal(){
+  const el = document.getElementById('redeem-overlay');
+  if(el) el.classList.remove('show');
+}
+function _updateRedeemLang(){
+  const isEn = currentLang === 'en';
+  const map = {
+    'rdm-title':      isEn ? 'Redeem Code'                                  : '兌換點數碼',
+    'rdm-sub':        isEn ? 'Enter your redeem code to add export credits.' : '輸入您的兌換碼，即可加入匯出點數。',
+    'rdm-btn-cancel': isEn ? 'Cancel' : '取消',
+    'rdm-btn-submit': isEn ? 'Redeem' : '兌換'
+  };
+  Object.entries(map).forEach(([id,txt])=>{ const el=document.getElementById(id); if(el) el.textContent=txt; });
+  const inp = document.getElementById('rdm-input');
+  if(inp) inp.placeholder = isEn ? 'Enter redemption code' : '輸入兌換碼';
+}
+
+function submitRedeem(){
+  const input = document.getElementById('rdm-input');
+  const msg   = document.getElementById('rdm-msg');
+  const code  = (input.value||'').trim().toUpperCase();
+  const isEn  = currentLang === 'en';
+
+  if(!code){
+    msg.textContent = isEn ? 'Please enter a redeem code.' : '請輸入兌換碼。';
+    msg.className = 'cg-msg err'; return;
+  }
+
+  const { redeemedCodes, balance } = getCreditState();
+
+  /* already redeemed? */
+  if(redeemedCodes.includes(code)){
+    input.classList.add('invalid');
+    msg.textContent = isEn ? 'This code has already been redeemed.' : '此兌換碼已使用過。';
+    msg.className = 'cg-msg err'; return;
+  }
+
+  /* check whitelist — only hardcoded demo codes accepted */
+  const credits = DEMO_CODES[code];
+  if(credits === undefined){
+    input.classList.add('invalid');
+    msg.textContent = isEn ? 'Invalid code. Please check and try again.' : '無效的兌換碼，請確認後再試。';
+    msg.className = 'cg-msg err'; return;
+  }
+
+  /* valid — apply */
+  const newBalance  = balance + credits;
+  const newRedeemed = [...redeemedCodes, code];
+  _cgSet('kaola_proof_credit_balance', newBalance);
+  _cgSet('kaola_proof_redeemed_codes', newRedeemed);
+
+  input.classList.add('valid');
+  msg.textContent = isEn
+    ? `✦ Success! +${credits} credits added. Balance: ${newBalance} credits.`
+    : `✦ 兌換成功！已加入 ${credits} 點。目前餘額：${newBalance} 點。`;
+  msg.className = 'cg-msg ok';
+  renderCreditCard();
+  setTimeout(closeRedeemModal, 2400);
+}
+
+/* ── Export Gate Modal ── */
+function openGateModal(){
+  _updateGateLang();
+  const el = document.getElementById('gate-overlay');
+  if(el) el.classList.add('show');
+}
+function closeGateModal(){
+  const el = document.getElementById('gate-overlay');
+  if(el) el.classList.remove('show');
+}
+function _updateGateLang(){
+  const isEn = currentLang === 'en';
+  const map = {
+    'gate-title':         isEn ? 'Export Credits Required'                                                  : '匯出點數不足',
+    'gate-sub':           isEn ? 'Your free trial has been used. Purchase credits to continue exporting.'   : '您的免費試用已用完，需要購買點數才能繼續匯出文件。',
+    'gate-pack1-name':    'Starter',
+    'gate-pack1-price':   'NT$99',
+    'gate-pack1-credits': isEn ? '6 exports'  : '6 次匯出',
+    'gate-pack2-name':    'Creator',
+    'gate-pack2-price':   'NT$299',
+    'gate-pack2-credits': isEn ? '25 exports' : '25 次匯出',
+    'gate-btn-buy':       isEn ? 'Purchase on Portaly →' : '前往 Portaly 購買 →',
+    'gate-divider-or':    isEn ? 'or' : '或',
+    'gate-btn-redeem':    isEn ? 'Enter Redeem Code' : '輸入兌換碼',
+    'gate-btn-cancel':    isEn ? 'Cancel' : '取消'
+  };
+  Object.entries(map).forEach(([id,txt])=>{ const el=document.getElementById(id); if(el) el.textContent=txt; });
+}
+
+/* ── Buy Credits — opens Portaly ── */
+function buyCredits(){
+  window.open(PORTALY_URL, '_blank', 'noopener,noreferrer');
+}
+
+/* Close CreditGate modals on ESC */
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){
+    closeRedeemModal();
+    closeGateModal();
+  }
+});
+  // REVISE7: draftAutoResume IIFE removed — draft restore is now user-initiated
+
+/* ── REVISE7a: Page-load init ─────────────────────────────────────────
+   Restore language + detect saved draft BEFORE any user interaction.
+   checkWelcomeDraftState() must run here, NOT inside startJournal().
+─────────────────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    const sl = localStorage.getItem('propri_lang');
+    if (sl === 'en' || sl === 'zh') currentLang = sl;
+  } catch(e){}
+  setLang(currentLang);
+  checkWelcomeDraftState(); // show draft fork or normal mode-pick on page load
+});
+
+</script>
+
+  <!-- v3.5.0 Redeem Code Modal -->
+  <div class="cg-overlay" id="redeem-overlay" onclick="if(event.target===this)closeRedeemModal()">
+    <div class="cg-panel">
+      <div class="cg-panel-title" id="rdm-title">兌換點數碼</div>
+      <div class="cg-panel-sub" id="rdm-sub">輸入您的兌換碼，即可加入匯出點數。</div>
+      <input class="cg-input" id="rdm-input" type="text" placeholder="輸入兌換碼"
+             autocomplete="off" spellcheck="false"
+             oninput="document.getElementById('rdm-input').classList.remove('invalid','valid');document.getElementById('rdm-msg').textContent='';document.getElementById('rdm-msg').className='cg-msg';"
+             onkeydown="if(event.key==='Enter')submitRedeem()"/>
+      <div class="cg-msg" id="rdm-msg"></div>
+      <div class="cg-actions">
+        <button class="btn btn-ghost" onclick="closeRedeemModal()" id="rdm-btn-cancel">取消</button>
+        <button class="btn btn-primary" onclick="submitRedeem()" id="rdm-btn-submit">兌換</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- v3.5.0 Export Gate Modal -->
+  <div class="cg-overlay" id="gate-overlay">
+    <div class="cg-panel">
+      <div class="cg-panel-title" id="gate-title">匯出點數不足</div>
+      <div class="cg-panel-sub" id="gate-sub">您的免費試用已用完，需要購買點數才能繼續匯出文件。</div>
+      <div class="gate-pack-row">
+        <div class="gate-pack">
+          <div class="gate-pack-name" id="gate-pack1-name">Starter</div>
+          <div class="gate-pack-price" id="gate-pack1-price">NT$99</div>
+          <div class="gate-pack-credits" id="gate-pack1-credits">6 次匯出</div>
+        </div>
+        <div class="gate-pack highlight">
+          <div class="gate-pack-name" id="gate-pack2-name">Creator</div>
+          <div class="gate-pack-price" id="gate-pack2-price">NT$299</div>
+          <div class="gate-pack-credits" id="gate-pack2-credits">25 次匯出</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="buyCredits()" id="gate-btn-buy"
+              style="width:100%;justify-content:center;margin-bottom:10px;">前往 Portaly 購買 →</button>
+      <div class="gate-divider" id="gate-divider-or">或</div>
+      <button class="btn btn-ghost" onclick="closeGateModal();openRedeemModal();" id="gate-btn-redeem"
+              style="width:100%;justify-content:center;margin-bottom:10px;">輸入兌換碼</button>
+      <button class="btn btn-ghost" onclick="closeGateModal()" id="gate-btn-cancel"
+              style="width:100%;justify-content:center;color:rgba(255,255,255,.32);">取消</button>
+      <div style="margin-top:16px;font-size:10.5px;color:rgba(255,255,255,.2);line-height:1.5;text-align:center;"
+           id="gate-disclaimer">⚠ localStorage credit gating is prototype-only and not secure for production monetization.</div>
+    </div>
+  </div>
+
+</body>
+</html>
