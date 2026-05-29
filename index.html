@@ -1351,6 +1351,195 @@ html[lang="en"] .save-pill {
 .gate-pack-credits { font-size: 12px; color: rgba(255,255,255,.5); }
 .gate-pack.highlight .gate-pack-credits { color: var(--lavender); }
 .gate-divider { text-align: center; font-size: 12px; color: rgba(255,255,255,.3); margin: 12px 0; }
+
+/* ════════════════════════════════════════════
+   REVISE7f: Mobile Responsive Breakpoint
+   Applies to ≤ 900px (covers iPhone 390/430px)
+   Desktop layout (> 900px) is untouched.
+════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+
+  /* ── Global overflow guard ── */
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  /* ── App grid: 3-col → single column, stacked ── */
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+    grid-template-areas:
+      "hd"
+      "mn"
+      "sb"
+      "pv";
+    min-height: 100vh;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+  }
+
+  /* ── Header ── */
+  #hd {
+    padding: 14px 18px 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* ── Main content — full width, no compression ── */
+  #mn {
+    padding: 16px 18px 32px;
+    overflow-y: visible;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* ── Left sidebar — unstick, normal flow, compact ── */
+  #sb {
+    position: static;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow-y: visible;
+    overflow-x: hidden;
+    padding: 12px 18px 20px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Step list glass card — no fixed height on mobile */
+  #sb > .glass {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  /* ── Right panel — unstick, normal flow ── */
+  #pv {
+    position: static;
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+    overflow-x: hidden;
+    padding: 12px 18px 24px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* ── Form fields: 100% width, prevent iOS auto-zoom ── */
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 16px !important;  /* iOS: prevents auto-zoom on focus */
+  }
+
+  /* ── releaseDate flex row: stack on mobile ── */
+  #releaseDate + button,
+  div[style*="display:flex"] > input,
+  div[style*="display:flex"] > button {
+    width: 100%;
+  }
+  /* releaseDate row wrap */
+  .field div[style*="gap:8px"] {
+    flex-wrap: wrap;
+  }
+
+  /* ── 2-column field grid → single column ── */
+  .f2 {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Hero title: scale down ── */
+  .hero-title {
+    font-size: 32px !important;
+    line-height: 1.2;
+  }
+
+  .brand-ver {
+    font-size: 11px !important;
+  }
+
+  /* ── Step header ── */
+  .stp-eyebrow { font-size: 11px !important; }
+  .stp-title   { font-size: 22px !important; }
+  .stp-sub     { font-size: 15px !important; }
+
+  /* ── Buttons: allow wrap in step-nav ── */
+  .step-nav {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .step-nav .btn {
+    min-width: unset;
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  /* ── Header action row: wrap ── */
+  .hd-actions, .hd-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* ── Labels: slightly smaller on mobile ── */
+  label, .field label {
+    font-size: 16px !important;
+  }
+
+  /* ── Cards / glass cards: no horizontal blowout ── */
+  .glass, .glass-deep, .pv-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  /* ── prog-list items: smaller on mobile ── */
+  .prog-item {
+    font-size: 14px !important;
+  }
+
+  /* ── Status chip / detail text: readable on mobile ── */
+  .chip { font-size: 12px !important; padding: 4px 10px !important; }
+  .rl-row { font-size: 14px !important; }
+
+  /* ── Companion card: reduce height ── */
+  .companion-card { padding: 12px !important; }
+  .propri-stage { width: 64px !important; height: 64px !important; }
+
+  /* ── Notice blocks ── */
+  .notice { font-size: 14px !important; }
+
+  /* ── Credit gate modals: full width on mobile ── */
+  .cg-modal-inner, .modal-box {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    padding: 20px !important;
+    box-sizing: border-box;
+  }
+
+  /* ── Info bar (top of #mn) ── */
+  .info-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 13px !important;
+  }
+
+}
+/* END @media (max-width: 900px) */
 </style>
 </head>
 <body>
@@ -1498,7 +1687,7 @@ html[lang="en"] .save-pill {
     <div class="brand">
       <div class="brand-gem">♪</div>
       <span class="brand-name">propri · Rights QA Journal</span>
-      <span class="brand-ver">v3.5.0 REVISE7e · 2026-05-29 · Local-First</span>
+      <span class="brand-ver">v3.5.0 REVISE7f · 2026-05-29 · Local-First</span>
       <button class="btn-return-mode" id="btn-return" onclick="returnToLanding()">← 返回模式選擇</button>
       <button id="btn-lang" class="btn-lang-toggle" onclick="toggleLang()">EN</button>
     </div>

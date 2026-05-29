@@ -1,107 +1,78 @@
 # CHANGELOG
 
-## v3.5.0 REVISE7e — 2026-05-29 (Checkpoint Candidate)
+## v3.5.0 REVISE7f — 2026-05-29
 
 ### Fixed
 
-**Sidebar / Step-list Internal Scrolling**
-- Left sidebar step-list card now scrolls independently via mousewheel
-- Fix applied at `#sb > .glass` level (not `#app`) — overall page layout is not affected
-- `#app` retains `min-height: 100vh`; no layout compression or 跑版
-- propri mascot companion card remains fixed; only the step list card scrolls
-- 4px webkit scrollbar visible in Chrome; `scrollbar-width: thin` for Firefox
+**Mobile Responsive Layout (`@media max-width: 900px`)**
+- Three-column desktop grid no longer applied to mobile widths
+- `#app` switches to single-column stacked layout at ≤ 900px; column order: header → main form → sidebar → status panel
+- Main form content appears first — highest priority on narrow screens
+- `#sb` (left sidebar): `position:sticky; height:100vh` → `position:static; height:auto` on mobile
+- `#pv` (right panel): same unstick treatment; moves below main content on mobile
+- All `input`, `select`, `textarea`: `width:100%; font-size:16px` on mobile (prevents iOS auto-zoom)
+- `.f2` (two-column field rows): collapses to single column on mobile
+- `html`, `body`: `overflow-x:hidden; max-width:100vw` — no horizontal scroll
+- `.step-nav`: `flex-wrap:wrap` — action buttons wrap on narrow screens
+- Hero title: `58px → 32px` on mobile
+- Modals: `94vw` width on mobile
+- Desktop layout (> 900px) fully preserved
 
-**Work Identity Required Fields (Step 1)**
-- All 7 fields now required before export: Track Title, Artist Name, Release Type, Version Name, Language, Genre & Mood, Release Date
-- Red `*` markers added to all required labels
-- Labels use inner-span i18n pattern — `*` markers survive language switching (zh ↔ en)
-- Release Date: added "尚未確定" quick-fill button; field accepts free text including "尚未確定"
-- `calcReady()` enforces Step 1 validation: returns `missing` if any required field is empty
+### Unchanged from REVISE7e
 
-**Ownership & Rights Required Fields (Step 4)**
-- All 10 fields now required before export: Master Owner, Composition Owner, Lyricist, Composer, Producer, Performer, Featured Artist, Royalty Split, Sample Use, Cover Art Rights
-- Red `*` markers added to all required labels with same inner-span i18n pattern
-- Featured Artist: placeholder updated to "如無特邀藝人，請填 None / 無 / N/A"
-- `calcReady()` enforces Step 4 validation after Step 1 passes
-- Featured Artist set to None/無/N/A bypasses the Royalty Split highrisk check
-
-### Confirmed Passing (unchanged from REVISE7c)
-
-- **Save draft / Clear draft** — localStorage persistence fully functional
-- **Empty export blocker** — PDF / JSON / Copy all blocked when fields empty or status not ready
-- **CreditGate redemption codes** — Redeem UI and credit gate logic preserved; demo codes removed from public package
-- **Credit trial / purchase flow** — Portaly payment link, redeem modal, balance display unchanged
-- **Language switching** — zh ↔ en full i18n; `*` markers do not disappear on switch
-- **propri companion** — PNG-based assets, CSS-only animation, no SVG redraw
+- **Required field validation** — Step 1 (7 fields) + Step 4 (10 fields) all enforced
+- **Required asterisks** — inner-span i18n pattern; survive language switching (zh ↔ en)
+- **Release Date TBD button** — "尚未確定" quick-fill preserved
+- **Save draft / Clear draft** — localStorage persistence unchanged
+- **Empty export blocker** — PDF / JSON / Copy all blocked when fields empty
+- **CreditGate redemption UI** — redeem modal, balance display, export gate intact (codes removed from public package)
+- **Language switching** — full zh ↔ en i18n unchanged
+- **propri companion** — PNG-based assets, CSS-only animation
 
 ---
 
-## v3.5.0 REVISE7d — 2026-05-29 (Rejected — layout compression)
+## v3.5.0 REVISE7e — 2026-05-29
 
-- Attempted `#app { height:100vh }` to fix sidebar scroll → caused layout 跑版
-- Sidebar still did not scroll; rejected in manual QA
-- Not published
+- Step list internal scroll: `#sb > .glass` override
+- Work Identity (Step 1): all 7 fields required + red `*` markers
+- Ownership (Step 4): all 10 fields required + red `*` markers
+- Release Date: "尚未確定" quick-fill button
+- `calcReady()` rewritten with S1 + S4 required checks
+
+---
+
+## v3.5.0 REVISE7d — 2026-05-29 (Rejected)
+
+- `#app { height:100vh }` caused layout compression — rejected in QA
 
 ---
 
 ## v3.5.0 REVISE7c — 2026-05-29
 
-- Visual CSS patch (10 fixes): sidebar scroll attempt, button sizing, stepper labels, version readability
-- Manual QA passed; used as source base for REVISE7e
+- 10 CSS fixes: sidebar scroll, button sizing, stepper labels
 
 ---
 
-## v3.5.0 REVISE7b — 2026-05-29
+## v3.5.0 REVISE7b / REVISE7a / REVISE7 — 2026-05-27–29
 
-- UI layout patch (8 fixes): sidebar, nav row, stepper labels, header clarity
-
----
-
-## v3.5.0 REVISE7a — 2026-05-29
-
-- 9 fixes: Toast notifications, auto-resume draft on load, export lock behaviour
-
----
-
-## v3.5.0 REVISE7 — 2026-05-27
-
-- Initial CreditGate integration: trial / credit / redeem / Portaly URL / export gate
+- UI layout, Toast, draft auto-resume, export lock, credit gate integration
 
 ---
 
 ## v3.5.0 CreditGate PortalyMVP — 2026-05-27
 
-- Credit system architecture: localStorage-based trial, balance, redeem whitelist
-- Portaly payment link integration (placeholder)
-- Export gate: `gateExport()` wraps all formal export actions
+- Credit system: localStorage trial, balance, redeem whitelist, Portaly payment link
 
 ---
 
-## v3.4.x series — 2026-05
+## v3.4.x — 2026-05
 
-- v3.4.8 RC1: Full QA audit, stability checkpoint
-- v3.4.7: i18n completeness, terminology standardisation
-- v3.4.6: Comprehensive STRINGS dict, full setLang() rewrite
-- v3.4.5: TermPatch — terminology + favicon
-- v3.4.4: Removed 文件摘要 / 匯出捷徑 from right sidebar
-- v3.4.3: Bug fixes
-- v3.4.2: Product logic patches (6 fixes)
-- v3.4.1: UX patches (5 fixes)
-
----
-
-## v3.4.0 — Typography + Local Attachment UX
+- v3.4.8 RC1 → v3.4.7 → v3.4.6 (full i18n) → v3.4.5 (TermPatch) → v3.4.4 → v3.4.3 → v3.4.2 → v3.4.1 → v3.4.0
 
 ---
 
 ## v3.3.0 — 10 UX Corrections
 
----
-
 ## v3.2.0 — Cinematic UI + propri Companion
 
----
-
-## v3.0.0 — Initial prototype
-
-- 8-step journal flow, document preview, export UI
+## v3.0.0 — Initial prototype (8-step flow, document preview, export)
