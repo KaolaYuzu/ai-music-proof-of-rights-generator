@@ -1726,7 +1726,7 @@ html[lang="en"] .save-pill {
     <div class="brand">
       <div class="brand-gem">♪</div>
       <span class="brand-name">propri · Rights QA Journal</span>
-      <span class="brand-ver">v3.5.0 REVISE8b · 2026-05-30 · Local-First</span>
+      <span class="brand-ver">v3.6.0 BetaRedeemAPI · 2026-05-30 · Local-First</span>
       <button class="btn-return-mode" id="btn-return" onclick="returnToLanding()">← 返回模式選擇</button>
       <button id="btn-lang" class="btn-lang-toggle" onclick="toggleLang()">EN</button>
     </div>
@@ -3556,7 +3556,7 @@ function rebuildChips(){
 
 
 /* ════════════════════════════════════════════
-   v3.5.0 CreditGate — Credit System Prototype
+   v3.6.0 BetaRedeemAPI — Credit System + Google Apps Script Redeem
    README: localStorage credit gating is
    prototype-only and not secure for
    production monetization.
@@ -3566,7 +3566,8 @@ function rebuildChips(){
 const DEMO_CODES = {} /* redemption codes removed — configure privately before deployment */;
 
 /* Portaly purchase page (placeholder) */
-const PORTALY_URL = 'https://portaly.cc/kaola';
+const PORTALY_URL = 'https://portaly.cc/kaola'; /* kept for internal reference */
+const REDEEM_API_URL = 'YOUR_APPS_SCRIPT_DEPLOYMENT_URL'; /* replace with your Apps Script Web App URL after deployment */
 
 /* ── localStorage helpers ── */
 function _cgGet(key, def){
@@ -3716,47 +3717,112 @@ function _updateRedeemLang(){
   if(inp) inp.placeholder = isEn ? 'e.g. XXXX-XXXX-0' : '例如 XXXX-XXXX-0';
 }
 
-function submitRedeem(){
-  const input = document.getElementById('rdm-input');
-  const msg   = document.getElementById('rdm-msg');
-  const code  = (input.value||'').trim().toUpperCase();
-  const isEn  = currentLang === 'en';
+/* ── v3.6.0 BetaRedeemAPI — error reason → UI message map ── */
+const REDEEM_ERROR_MSG = {
+  missing_code:     { zh: '請輸入兌換碼。',                     en: 'Please enter a redeem code.' },
+  invalid_code:     { zh: '無效的兌換碼，請確認後再試。',           en: 'Invalid code. Please check and try again.' },
+  code_revoked:     { zh: '此兌換碼已停用，請聯繫客服。',           en: 'This code has been revoked. Please contact support.' },
+  code_exhausted:   { zh: '此兌換碼已達使用上限。',               en: 'This code has reached its usage limit.' },
+  already_redeemed: { zh: '此兌換碼已在本裝置使用過。',            en: 'This code has already been redeemed on this device.' },
+  network_error:    { zh: '網路錯誤，請稍後再試。',               en: 'Network error. Please try again later.' },
+  server_error:     { zh: '伺服器錯誤，請稍後再試。',             en: 'Server error. Please try again later.' }
+};
+
+/* ── v3.6.0 BetaRedeemAPI — async redeem via Google Apps Script ── */
+async function redeemViaAPI(code, email) {
+  const res = await fetch(REDEEM_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, email })
+  });
+  if (!res.ok) throw new Error('http_' + res.status);
+  return await res.json();
+}
+
+function _setRedeemBtn(disabled) {
+  const btn = document.getElementById('rdm-btn-submit');
+  if (!btn) return;
+  const isEn = currentLang === 'en';
+  btn.disabled = disabled;
+  btn.textContent = disabled
+    ? (isEn ? 'Checking…' : '驗證中…')
+    : (isEn ? 'Redeem'         : '兑換');
+}
+
+async function submitRedeem(){
+  const input    = document.getElementById('rdm-input');
+  const emailInp = document.getElementById('rdm-email');
+  const msg      = document.getElementById('rdm-msg');
+  const code     = (input.value||'').trim().toUpperCase();
+  const email    = emailInp ? (emailInp.value||'').trim() : '';
+  const isEn     = currentLang === 'en';
 
   if(!code){
-    msg.textContent = isEn ? 'Please enter a redeem code.' : '請輸入兌換碼。';
+    msg.textContent = isEn ? 'Please enter a redeem code.' : '請輸入兑換碼。';
     msg.className = 'cg-msg err'; return;
   }
 
+  /* local device duplicate check */
   const { redeemedCodes, balance } = getCreditState();
-
-  /* already redeemed? */
   if(redeemedCodes.includes(code)){
     input.classList.add('invalid');
-    msg.textContent = isEn ? 'This code has already been redeemed.' : '此兌換碼已使用過。';
+    const m = REDEEM_ERROR_MSG['already_redeemed'];
+    msg.textContent = isEn ? m.en : m.zh;
     msg.className = 'cg-msg err'; return;
   }
 
-  /* check whitelist — only hardcoded demo codes accepted */
-  const credits = DEMO_CODES[code];
-  if(credits === undefined){
+  /* DEMO_CODES local fallback (empty {} in public build — reserved for private config) */
+  if(DEMO_CODES[code] !== undefined){
+    const credits    = DEMO_CODES[code];
+    const newBalance = balance + credits;
+    _cgSet('kaola_proof_credit_balance', newBalance);
+    _cgSet('kaola_proof_redeemed_codes', [...redeemedCodes, code]);
+    input.classList.add('valid');
+    msg.textContent = isEn
+      ? `❆ Success! +${credits} credits added. Balance: ${newBalance} credits.`
+      : `❆ 兑換成功！已加入 ${credits} 點。目前餘額：${newBalance} 點。`;
+    msg.className = 'cg-msg ok';
+    renderCreditCard();
+    setTimeout(closeRedeemModal, 2400);
+    return;
+  }
+
+  /* API redeem via Google Apps Script */
+  _setRedeemBtn(true);
+  const reEnableTimer = setTimeout(() => _setRedeemBtn(false), 3000);
+
+  try {
+    const result = await redeemViaAPI(code, email);
+    clearTimeout(reEnableTimer);
+    _setRedeemBtn(false);
+
+    if(result.ok){
+      const credits    = result.credits;
+      const newBalance = balance + credits;
+      _cgSet('kaola_proof_credit_balance', newBalance);
+      _cgSet('kaola_proof_redeemed_codes', [...redeemedCodes, code]);
+      input.classList.add('valid');
+      msg.textContent = isEn
+        ? `❆ Success! +${credits} credits added. Balance: ${newBalance} credits.`
+        : `❆ 兑換成功！已加入 ${credits} 點。目前餘額：${newBalance} 點。`;
+      msg.className = 'cg-msg ok';
+      renderCreditCard();
+      setTimeout(closeRedeemModal, 2400);
+    } else {
+      input.classList.add('invalid');
+      const reason = result.reason || 'server_error';
+      const m = REDEEM_ERROR_MSG[reason] || REDEEM_ERROR_MSG['server_error'];
+      msg.textContent = isEn ? m.en : m.zh;
+      msg.className = 'cg-msg err';
+    }
+  } catch(err) {
+    clearTimeout(reEnableTimer);
+    _setRedeemBtn(false);
     input.classList.add('invalid');
-    msg.textContent = isEn ? 'Invalid code. Please check and try again.' : '無效的兌換碼，請確認後再試。';
-    msg.className = 'cg-msg err'; return;
+    const m = REDEEM_ERROR_MSG['network_error'];
+    msg.textContent = isEn ? m.en : m.zh;
+    msg.className = 'cg-msg err';
   }
-
-  /* valid — apply */
-  const newBalance  = balance + credits;
-  const newRedeemed = [...redeemedCodes, code];
-  _cgSet('kaola_proof_credit_balance', newBalance);
-  _cgSet('kaola_proof_redeemed_codes', newRedeemed);
-
-  input.classList.add('valid');
-  msg.textContent = isEn
-    ? `✦ Success! +${credits} credits added. Balance: ${newBalance} credits.`
-    : `✦ 兌換成功！已加入 ${credits} 點。目前餘額：${newBalance} 點。`;
-  msg.className = 'cg-msg ok';
-  renderCreditCard();
-  setTimeout(closeRedeemModal, 2400);
 }
 
 /* ── Export Gate Modal ── */
@@ -3780,7 +3846,7 @@ function _updateGateLang(){
     'gate-pack2-name':    'Creator',
     'gate-pack2-price':   'NT$299',
     'gate-pack2-credits': isEn ? '25 exports' : '25 次匯出',
-    'gate-btn-buy':       isEn ? 'Purchase on Portaly →' : '前往 Portaly 購買 →',
+    'gate-btn-buy':       isEn ? 'Buy Credits (Coming soon)' : '購買點數（即將開放）',
     'gate-divider-or':    isEn ? 'or' : '或',
     'gate-btn-redeem':    isEn ? 'Enter Redeem Code' : '輸入兌換碼',
     'gate-btn-cancel':    isEn ? 'Cancel' : '取消'
@@ -3788,9 +3854,19 @@ function _updateGateLang(){
   Object.entries(map).forEach(([id,txt])=>{ const el=document.getElementById(id); if(el) el.textContent=txt; });
 }
 
-/* ── Buy Credits — opens Portaly ── */
+/* ── Buy Credits — v3.6 Coming Soon (payment link not live yet) ── */
 function buyCredits(){
-  window.open(PORTALY_URL, '_blank', 'noopener,noreferrer');
+  const isEn = currentLang === 'en';
+  const btn = document.getElementById('gate-btn-buy');
+  const orig = btn ? btn.textContent : '';
+  if(btn){
+    btn.textContent = isEn ? 'Coming soon — 即將開放' : '購買功能即將開放';
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.disabled = false;
+    }, 3000);
+  }
 }
 
 /* Close CreditGate modals on ESC */
@@ -3849,10 +3925,14 @@ document.addEventListener('DOMContentLoaded', function() {
              autocomplete="off" spellcheck="false"
              oninput="document.getElementById('rdm-input').classList.remove('invalid','valid');document.getElementById('rdm-msg').textContent='';document.getElementById('rdm-msg').className='cg-msg';"
              onkeydown="if(event.key==='Enter')submitRedeem()"/>
+      <input class="cg-input" id="rdm-email" type="email" placeholder="Email（選填 / Optional）"
+             autocomplete="email" spellcheck="false"
+             style="margin-top:8px;font-size:13px;opacity:0.72;"
+             onkeydown="if(event.key==='Enter')submitRedeem()"/>
       <div class="cg-msg" id="rdm-msg"></div>
       <div class="cg-actions">
         <button class="btn btn-ghost" onclick="closeRedeemModal()" id="rdm-btn-cancel">取消</button>
-        <button class="btn btn-primary" onclick="submitRedeem()" id="rdm-btn-submit">兌換</button>
+        <button class="btn btn-primary" onclick="submitRedeem()" id="rdm-btn-submit" style="min-width:80px;">兑換</button>
       </div>
     </div>
   </div>
@@ -3875,7 +3955,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
       </div>
       <button class="btn btn-primary" onclick="buyCredits()" id="gate-btn-buy"
-              style="width:100%;justify-content:center;margin-bottom:10px;">前往 Portaly 購買 →</button>
+              style="width:100%;justify-content:center;margin-bottom:10px;">購買點數（即將開放）</button>
       <div class="gate-divider" id="gate-divider-or">或</div>
       <button class="btn btn-ghost" onclick="closeGateModal();openRedeemModal();" id="gate-btn-redeem"
               style="width:100%;justify-content:center;margin-bottom:10px;">輸入兌換碼</button>

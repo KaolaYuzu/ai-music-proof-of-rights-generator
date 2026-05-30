@@ -1,48 +1,48 @@
-# QA Log — v3.5.0 REVISE8b (PublicGitHubSafe)
+# QA Log — v3.6.0 BetaRedeemAPI (PublicGitHubSafe)
 
-**Version:** v3.5.0 REVISE8b · 2026-05-30
-**Status:** Code QA 34/34 PASS · JS syntax OK · Mobile Visual QA pending
+**Version:** v3.6.0 BetaRedeemAPI · 2026-05-30
+**Status:** Code QA 36/36 PASS · JS Syntax OK · Mobile Visual QA Pending (real device)
 
 ---
 
-## Code QA — 34/34 PASS
+## Code QA — 36/36 PASS
 
 | # | Check | |
 |---|-------|-|
-| V1 | REVISE8b version string | ✅ |
-| V2 | No REVISE8 (non-b) version string | ✅ |
-| C1 | clearDraftNow uses `currentLang` (not `lang`) | ✅ |
-| C2 | clearDraftNow calls `goTo(1)` | ✅ |
-| C3 | clearDraftNow calls `setState('idle')` | ✅ |
-| C4 | clearDraftNow clears `.fp-chip` | ✅ |
-| C5 | clearDraftNow calls `toast()` | ✅ |
-| C6 | clearDraftNow removes doc overlay | ✅ |
-| S7A | Step 7 nav has `back(7)` | ✅ |
-| S7B | Step 7 nav has `saveDraftNow()` | ✅ |
-| S7C | Step 7 nav has `goTo(8)` | ✅ |
-| PDF1 | `#doc-overlay.show`: `display: block` on mobile | ✅ |
-| PDF2 | `overflow-y: auto !important` on mobile overlay | ✅ |
-| PDF3 | `-webkit-overflow-scrolling: touch` on mobile | ✅ |
-| PDF4 | `#proof-doc overflow: visible` on mobile | ✅ |
-| S8A | Preview button calls `openDoc()` (free) | ✅ |
-| S8B | `id="btn-exportPDF"` present | ✅ |
-| S8C | `gatedExportPDF()` function present | ✅ |
-| S8D | JSON uses `gatedExportJSON()` | ✅ |
-| S8E | Copy uses `gatedCopyText()` | ✅ |
-| S8F | Clear draft in Step 8 nav (`id="s8-btn-clear"`) | ✅ |
-| S8G | Restart button present | ✅ |
-| S8H | `gatedExportPDF` calls `gateExport` | ✅ |
-| M1 | `#sb { display: none !important }` on mobile | ✅ |
-| M2 | REVISE8 single-flow preserved | ✅ |
+| V1 | v3.6.0 BetaRedeemAPI version string present | ✅ |
+| V2b | brand-ver span shows v3.6.0 | ✅ |
+| R1 | `const REDEEM_API_URL` present | ✅ |
+| R2 | `YOUR_APPS_SCRIPT_DEPLOYMENT_URL` placeholder (not live URL) | ✅ |
+| R3 | `async function redeemViaAPI` present | ✅ |
+| R4 | `async function submitRedeem` (async keyword) | ✅ |
+| R5 | `REDEEM_ERROR_MSG` map present (7 keys) | ✅ |
+| R6 | `_setRedeemBtn` function present | ✅ |
+| R7 | `btn.disabled = disabled` logic present | ✅ |
+| R8 | `reEnableTimer` (3s anti-spam re-enable) present | ✅ |
+| E1 | `id="rdm-email"` email input present in modal | ✅ |
+| E2 | `type="email"` on email input | ✅ |
+| E3 | `Optional` / `選填` bilingual placeholder text | ✅ |
+| D1 | `DEMO_CODES = {}` (empty object, no codes) | ✅ |
+| D2 | `DEMO_CODES[code] !== undefined` local fallback check present | ✅ |
+| CS1 | `Coming soon` text present | ✅ |
+| CS2 | `即將開放` text present | ✅ |
+| CS3 | `buyCredits()` does NOT call `window.open(PORTALY_URL` | ✅ |
+| P1 | `clearDraftNow()` preserved | ✅ |
+| P2 | `goTo(1)` in clearDraftNow preserved | ✅ |
+| P3 | `gatedExportPDF()` preserved | ✅ |
+| P4 | `gatedExportJSON()` preserved | ✅ |
+| P5 | `gatedCopyText()` preserved | ✅ |
+| P6 | `#sb { display: none !important }` in mobile media query | ✅ |
+| P7 | `propi-float` floating cursor present | ✅ |
+| P8 | `overflow-y: auto !important` on doc overlay mobile | ✅ |
+| P9 | `-webkit-overflow-scrolling` iOS scroll fix | ✅ |
+| P10 | `saveDraftNow()` preserved | ✅ |
+| P11 | `calcReady()` validation preserved | ✅ |
 | SEC1 | STARTER-DEMO-6 absent | ✅ |
 | SEC2 | CREATOR-DEMO-25 absent | ✅ |
 | SEC3 | TEST-DEMO-20 absent | ✅ |
-| SEC4 | `DEMO_CODES = {}` | ✅ |
-| CORE1 | `calcReady()` validation present | ✅ |
-| CORE2 | Red `*` markers | ✅ |
-| CORE3 | `saveDraftNow()` present | ✅ |
-| CORE4 | `gatedExportJSON()` present | ✅ |
-| CORE5 | `gatedCopyText()` present | ✅ |
+| SEC4 | PORTALY-BETA-xxx absent | ✅ |
+| SEC5 | SKOOL-BETA-xxx absent | ✅ |
 | JS | `node --check`: no syntax errors | ✅ |
 
 ---
@@ -60,6 +60,13 @@
 | JSON / Copy: credit deducted | ☐ |
 | Step 8: Clear draft button visible | ☐ |
 | Desktop 900px+: three-column layout intact | ☐ |
+| Redeem modal: email field visible below code field | ☐ |
+| Redeem button: shows "驗證中…" during API call | ☐ |
+| Redeem button: re-enables after response or 3s | ☐ |
+| Buy credits button: shows "即將開放" for 3s | ☐ |
+| Invalid code: shows ZH/EN error message | ☐ |
+| Network error: shows network_error message | ☐ |
+| Valid code (with real API): credits added + modal closes | ☐ |
 
 ---
 
@@ -70,6 +77,10 @@
 | STARTER-DEMO-6 absent | ✅ |
 | CREATOR-DEMO-25 absent | ✅ |
 | TEST-DEMO-20 absent | ✅ |
+| PORTALY-BETA-xxx absent | ✅ |
+| SKOOL-BETA-xxx absent | ✅ |
 | `DEMO_CODES = {}` | ✅ |
 | No `.env` / secrets / node_modules / .DS_Store | ✅ |
 | No Jennifer project files | ✅ |
+| No beta_codes_private_setup.csv in public package | ✅ |
+| `REDEEM_API_URL` is placeholder, not real URL | ✅ |
