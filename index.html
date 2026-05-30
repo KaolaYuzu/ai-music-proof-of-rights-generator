@@ -1717,7 +1717,7 @@ html[lang="en"] .save-pill {
     </div>
   </div>
   <div id="proof-doc">
-    <div class="doc-brandline">AI Music Proof-of-Rights Generator · Guided Rights QA Journal · v3.6.3</div>
+    <div class="doc-brandline">AI Music Proof-of-Rights Generator · Guided Rights QA Journal · v3.6.4</div>
     <div class="doc-maintitle" id="d-title">Proof-of-Rights Document</div>
     <div class="doc-subtitle"  id="d-sub">AI Music Creator Rights Record</div>
     <div class="doc-meta">
@@ -4015,19 +4015,30 @@ async function submitRestore(){
     _setRestoreBtn(false);
 
     if(result.ok){
-      const credits    = result.credits;
+      const credits    = result.credits;   // entitlement from Sheet
       const { balance } = getCreditState();
-      const newBalance = balance + credits;
-      _cgSet(CREDIT_KEY, newBalance);
-      if(input) input.classList.add('valid');
-      if(msg){
-        msg.innerHTML = isEn
-          ? `✦ Restored! +${credits} credits. Balance: ${newBalance}.<br><span style="font-size:11px;opacity:.7;">Credits have been restored to this browser.</span>`
-          : `✦ 恢復成功！+${credits} 點，餘額：${newBalance} 點。<br><span style="font-size:11px;opacity:.7;">點數已恢復至此瀏覽器。</span>`;
-        msg.className = 'cg-msg ok';
+      // Restore = recover entitlement, NOT add. Use Math.max to prevent accumulation.
+      if(balance >= credits){
+        // Already have at least as many credits — no change needed
+        if(input) input.classList.add('valid');
+        if(msg){
+          msg.textContent = isEn ? 'Credits are already restored.' : '點數已存在，無需重複恢復。';
+          msg.className = 'cg-msg ok';
+        }
+        setTimeout(closeRestoreModal, 2000);
+      } else {
+        // Restore to entitlement level
+        _cgSet(CREDIT_KEY, credits);
+        if(input) input.classList.add('valid');
+        if(msg){
+          msg.innerHTML = isEn
+            ? `✦ Restored! Credits set to ${credits}.<br><span style="font-size:11px;opacity:.7;">Credits have been restored to this browser.</span>`
+            : `✦ 恢復成功！點數已設為 ${credits} 點。<br><span style="font-size:11px;opacity:.7;">點數已恢復至此瀏覽器。</span>`;
+          msg.className = 'cg-msg ok';
+        }
+        renderCreditCard();
+        setTimeout(closeRestoreModal, 3200);
       }
-      renderCreditCard();
-      setTimeout(closeRestoreModal, 3200);
     } else {
       if(input) input.classList.add('invalid');
       const reason = result.reason || 'server_error';
