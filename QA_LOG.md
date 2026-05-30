@@ -1,59 +1,74 @@
-# QA Log — v3.5.0 REVISE7h (PublicGitHubSafe)
+# QA Log — v3.5.0 REVISE8 (PublicGitHubSafe)
 
-**Version:** v3.5.0 REVISE7h · 2026-05-29
-**Status:** Code QA 24/24 PASS · Mobile Visual QA pending (real device)
-
----
-
-## Desktop QA: ✅ PASSED (REVISE7e baseline confirmed by user)
+**Version:** v3.5.0 REVISE8 · 2026-05-30
+**Status:** Code QA 41/41 PASS · JS syntax OK · Mobile Visual QA pending (real device)
 
 ---
 
-## REVISE7h Code QA — 24/24 PASS
+## Code QA — 41/41 PASS
 
 | # | Check | |
 |---|-------|-|
-| H1 | wsScroll wrapper div in HTML (`id="wsScroll"`) | ✅ |
-| H2 | ws-inner div in HTML (`class="ws-inner"`) | ✅ |
-| H3 | `/ws-inner` comment present | ✅ |
-| H4 | `/ws-scroll` comment present | ✅ |
-| V1 | Version `v3.5.0 REVISE7h · 2026-05-29 · Local-First` | ✅ |
-| V2 | No REVISE7g/7f version strings | ✅ |
-| D1 | `#app` uses `grid-area: ws` | ✅ |
-| D2 | `.ws-inner` has `330px 1fr 330px` desktop columns | ✅ |
-| D3 | `.ws-inner` has `grid-template-areas: "sb mn pv"` | ✅ |
-| D4 | `#app` has `"ws"` grid area | ✅ |
-| M1 | `@media (max-width: 900px)` present | ✅ |
-| M2 | REVISE7h mobile block comment present | ✅ |
-| M3 | `.ws-scroll` has `-webkit-overflow-scrolling: touch` | ✅ |
-| M4 | `scroll-snap-type: x mandatory` on `.ws-scroll` | ✅ |
-| M5 | `touch-action: pan-x pan-y` on `.ws-scroll` | ✅ |
-| M6 | `320px 440px 320px` mobile column widths | ✅ |
-| M7 | `.ws-inner` has `width: 1080px` | ✅ |
-| M8 | `font-size: 16px !important` on inputs (iOS zoom fix) | ✅ |
-| M9 | `100svh` used for mobile app height | ✅ |
-| S1 | `html`/`body` NOT locked with `overflow:hidden` (both axes) | ✅ |
-| S2 | `overflow-x: hidden` on body (x-axis clip only) | ✅ |
-| S3 | `overflow-y: auto` on body | ✅ |
-| J1 | `wsScroll.scrollLeft = 320` in JS | ✅ |
-| J2 | REVISE7h JS comment present | ✅ |
-| JS | Node --check: no syntax errors | ✅ |
+| V1 | REVISE8 version string | ✅ |
+| V2 | No REVISE7h version string | ✅ |
+| M1 | REVISE8 mobile block present | ✅ |
+| M2 | `#sb { display: none !important }` on mobile | ✅ |
+| M3 | `.ws-scroll scroll-snap-type: none` on mobile | ✅ |
+| M4 | `.ws-inner flex-direction: column` on mobile | ✅ |
+| M5 | `#mn width: 100%` on mobile | ✅ |
+| M6 | `#pv position: static` on mobile | ✅ |
+| M7 | `.f2 grid-template-columns: 1fr` (single column) | ✅ |
+| M8 | `font-size: 16px !important` on inputs | ✅ |
+| M9 | `100svh` used | ✅ |
+| M10 | No `html/body overflow:hidden` both axes | ✅ |
+| F1 | `.propi-float` CSS present | ✅ |
+| F2 | `id="propri-float"` HTML present | ✅ |
+| F3 | `@keyframes propri-bob` animation | ✅ |
+| F4 | Desktop: `.propi-float display:none` (min-width:901px) | ✅ |
+| F5 | `propri_main.png` in float element | ✅ |
+| L1 | `btn-lang` in `#hd` (before wsScroll) | ✅ |
+| C1 | `clearDraftNow()` function present | ✅ |
+| C2 | `id="btn-clear-draft"` button present | ✅ |
+| C3 | `btn-clear-draft` i18n ZH: 清除草稿 | ✅ |
+| C4 | `btn-clear-draft` i18n EN: Clear draft | ✅ |
+| E1 | Preview button calls `openDoc()` | ✅ |
+| E2 | Preview button NOT `gatedOpenDoc()` | ✅ |
+| E3 | JSON uses `gatedExportJSON()` | ✅ |
+| E4 | Copy uses `gatedCopyText()` | ✅ |
+| E5 | `window.onafterprint` removed | ✅ |
+| E6 | Preview button text: 預覽 / 列印文件 | ✅ |
+| E7 | JSON button label: 正式輸出 | ✅ |
+| E8 | Copy button label: 正式輸出 | ✅ |
+| D1 | Desktop `.ws-scroll` / `.ws-inner` preserved | ✅ |
+| D2 | Desktop `330px 1fr 330px` columns | ✅ |
+| D3 | Desktop `"sb mn pv"` grid-areas | ✅ |
+| S1 | STARTER-DEMO-6 absent | ✅ |
+| S2 | CREATOR-DEMO-25 absent | ✅ |
+| S3 | TEST-DEMO-20 absent | ✅ |
+| S4 | `DEMO_CODES = {}` | ✅ |
+| R1 | `calcReady()` validation present | ✅ |
+| R2 | Red `*` markers present | ✅ |
+| SD1 | `saveDraftNow()` present | ✅ |
+| SD2 | `#save-draft-area` present | ✅ |
+| JS  | `node --check`: no syntax errors | ✅ |
 
 ---
 
 ## Mobile Visual QA — Pending (real device)
 
-To test on real device via Vercel:
-
 | Check | |
 |-------|-|
-| iOS Safari 390px: auto-scroll to center on load | ☐ |
-| iOS Safari 390px: left/right swipe between panels | ☐ |
-| iOS Safari 390px: propri mascot fully visible | ☐ |
-| iOS Safari 390px: center form fields fillable | ☐ |
-| iOS Safari 390px: right panel reachable by swipe | ☐ |
-| iOS Chrome 430px: same checks | ☐ |
-| Desktop (> 900px): layout unchanged | ☐ |
+| iOS Safari 390px: single-column flow (no horizontal scroll needed) | ☐ |
+| iOS Safari 390px: propri float visible at bottom-right, no text | ☐ |
+| iOS Safari 390px: propri float does not cover input fields | ☐ |
+| iOS Safari 390px: lang switch in header, always visible | ☐ |
+| iOS Safari 390px: Clear draft button visible | ☐ |
+| iOS Safari 390px: center form fields fillable (no zoom) | ☐ |
+| iOS Safari 390px: readiness summary below form | ☐ |
+| iOS Safari 390px: PDF/Print preview opens (no credit deducted) | ☐ |
+| iOS Safari 390px: JSON/Copy still credit-gated | ☐ |
+| Desktop (> 900px): three-column layout unchanged | ☐ |
+| Desktop (> 900px): Save/Clear draft functional | ☐ |
 
 ---
 
@@ -61,9 +76,9 @@ To test on real device via Vercel:
 
 | | |
 |-|-|
-| Demo code #1 (Starter) removed | ✅ |
-| Demo code #2 (Creator) removed | ✅ |
-| Demo code #3 (Test) removed | ✅ |
+| STARTER-DEMO-6 absent | ✅ |
+| CREATOR-DEMO-25 absent | ✅ |
+| TEST-DEMO-20 absent | ✅ |
 | `DEMO_CODES = {}` | ✅ |
 | No `.env` / secrets | ✅ |
 | No `node_modules` / `.DS_Store` / `.zip` | ✅ |

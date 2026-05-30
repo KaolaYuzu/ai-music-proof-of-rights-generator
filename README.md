@@ -1,8 +1,8 @@
 # AI Music Proof-of-Rights Generator
 
-**Version:** v3.5.0 CreditGate PortalyMVP — REVISE7h
-**Date:** 2026-05-29
-**Status:** ✅ Desktop QA Passed · ⚠️ Mobile Visual QA Pending (real device)
+**Version:** v3.5.0 CreditGate PortalyMVP — REVISE8
+**Date:** 2026-05-30
+**Status:** ✅ Code QA 41/41 PASS · ⚠️ Mobile Visual QA Pending (real device)
 
 ---
 
@@ -14,23 +14,35 @@ For Vercel: deploy this folder as-is. `index.html` at root is served automatical
 
 ---
 
-## Mobile Layout (REVISE7h — Horizontal Workspace, iOS-Safe)
+## Mobile Layout (REVISE8 — Single-Flow + Propi Floating Cursor)
 
-This version uses a **dedicated `.ws-scroll` wrapper** as the horizontal scroll container on mobile (≤ 900px).
+**Architecture change from REVISE7g/7h horizontal workspace.**
 
-**Why REVISE7h (vs REVISE7g):**
-REVISE7g used `#app` as the scroll container and set `html, body { overflow: hidden }` to prevent page scroll.
-On iPhone Safari, `overflow: hidden` on `html` or `body` locks ALL touch-based scroll including descendants — making the workspace completely unswipeable.
+After real-device testing confirmed that horizontal workspace approaches (REVISE7g/7h) were problematic on iOS Safari, REVISE8 adopts a single vertical content flow for mobile.
 
-**REVISE7h fix:**
-- New `<div class="ws-scroll" id="wsScroll">` wrapper encloses the three columns
-- `html` and `body` are **NOT locked** — only `overflow-x: hidden` (x-axis clip only)
-- `.ws-scroll` owns the horizontal scroll: `overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y`
-- Three columns preserved at fixed widths: **Left 320px · Center 440px · Right 320px**
-- On load, JS auto-scrolls to the **center (form) column** (`wsScroll.scrollLeft = 320`)
-- `scroll-snap-type: x mandatory` — swipe snaps cleanly to each column
-- Each column scrolls independently in the vertical direction
-- Desktop layout (> 900px): three-column grid unchanged via `.ws-inner`
+**Mobile (≤ 900px):**
+- Left sidebar (`#sb`) hidden — no Propi card, no step list panel
+- Main form (`#mn`) is the full-width primary content
+- Readiness summary (`#pv`) shown below the main form
+- Layout order: Header → Stepper → Main Form → Readiness Summary → Draft Actions
+- No horizontal scrolling required
+- Propi becomes a **56px floating cursor** fixed at bottom-right, with a gentle bob animation
+- Language switch (`ZH/EN`) stays in the header — always visible
+- Clear draft button visible alongside Save draft
+
+**Desktop (> 900px):** Three-column layout unchanged — left sidebar, center form, right status panel.
+
+---
+
+## Export Logic (REVISE8)
+
+| Action | Credit charged? |
+|---|---|
+| 🖨 Preview / Print document | **No** — preview only |
+| { } Download JSON archive | **Yes** — formal export |
+| ⎘ Copy plain text report | **Yes** — formal export |
+
+`window.onafterprint` removed — unreliable on mobile Safari, not used for credit deduction.
 
 ---
 
@@ -43,9 +55,9 @@ On iPhone Safari, `overflow: hidden` on `html` or `body` locks ALL touch-based s
 | Starter Pack | US$5 = 6 credits |
 | Creator Pack | US$20 = 25 credits |
 | Payment | Portaly (`https://portaly.cc/kaola`) — replace before launch |
-| Export gate | Enforced in-app via localStorage |
+| Export gate | JSON + Copy gated · PDF/Print ungated |
 
-> Redemption codes are removed from this public package. Configure private codes before deployment. Do not commit live redemption codes to a public repository.
+> Redemption codes are removed from this public package. Configure private codes before deployment.
 
 ---
 
