@@ -1538,7 +1538,45 @@ html[lang="en"] .save-pill {
   0%,100% { transform: translateY(0px); }
   50%      { transform: translateY(-10px); }
 }
-/* ===== END REVISE8 MOBILE ===================================== */
+
+  /* ── REVISE8b: PDF preview modal scroll on mobile ── */
+  #doc-overlay {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 16px 12px 40px !important;
+    /* block layout avoids flex scroll-container issues on iOS */
+    display: none;
+  }
+  #doc-overlay.show {
+    display: block !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  #proof-doc {
+    padding: 28px 18px 36px !important;
+    max-width: 100% !important;
+    border-radius: 10px !important;
+    overflow: visible !important;
+    max-height: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .doc-bar {
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+  .doc-bar-actions {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  .doc-bar-actions .btn {
+    font-size: 12px !important;
+    padding: 7px 12px !important;
+  }
+
+  /* ===== END REVISE8 MOBILE ===================================== */
 
 
 </style>
@@ -1688,7 +1726,7 @@ html[lang="en"] .save-pill {
     <div class="brand">
       <div class="brand-gem">♪</div>
       <span class="brand-name">propri · Rights QA Journal</span>
-      <span class="brand-ver">v3.5.0 REVISE8 · 2026-05-30 · Local-First</span>
+      <span class="brand-ver">v3.5.0 REVISE8b · 2026-05-30 · Local-First</span>
       <button class="btn-return-mode" id="btn-return" onclick="returnToLanding()">← 返回模式選擇</button>
       <button id="btn-lang" class="btn-lang-toggle" onclick="toggleLang()">EN</button>
     </div>
@@ -2105,8 +2143,9 @@ html[lang="en"] .save-pill {
         <span id="s7-helper">◦ PDF 列印、JSON 下載、純文字複製請前往下一步「匯出文件」。</span>
       </div>
       <div class="step-nav">
-        <div></div>
-        <button class="btn btn-primary" id="btn-goExport" onclick="goTo(8)">前往匯出 →</button>
+        <button class="btn btn-ghost" onclick="back(7)" data-i18n="btn-back">← 返回</button>
+        <button class="btn btn-ghost" onclick="saveDraftNow()" data-i18n="btn-save-draft">儲存草稿</button>
+        <button class="btn btn-primary" id="btn-goExport" onclick="goTo(8)" data-i18n="btn-goExport">前往匯出 →</button>
       </div>
     </div>
 
@@ -2123,19 +2162,23 @@ html[lang="en"] .save-pill {
         <div class="final-name" id="final-name">文件已就緒</div>
         <div class="final-fn"   id="final-fn">AI_Music_Proof_of_Rights_[曲名]_[日期]</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:10px;max-width:400px;">
-        <button class="btn btn-ghost" id="btn-openDocFull" onclick="openDoc()" style="justify-content:center;" title="Preview / Print — no credit charged">🖨 預覽 / 列印文件</button>
-        <button class="btn btn-primary" id="btn-exportJSON" onclick="gatedExportJSON()" style="justify-content:center;">{ } 下載 JSON 存檔（正式輸出）</button>
-        <button class="btn btn-ghost"   id="btn-copyText" onclick="gatedCopyText()" style="justify-content:center;">⎘ 複製純文字報告（正式輸出）</button>
+      <div id="s8-export-actions" style="display:flex;flex-direction:column;gap:10px;max-width:440px;width:100%;">
+        <div style="font-size:11px;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.07em;padding-top:4px;" id="s8-free-label">預覽（免費 · 不扣點）</div>
+        <button class="btn btn-ghost" id="btn-openDocFull" onclick="openDoc()" style="justify-content:center;" title="Preview document — no credit charged">🔍 預覽文件</button>
+        <div style="font-size:11px;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.07em;padding-top:8px;" id="s8-export-label">正式輸出（各扣 1 點）</div>
+        <button class="btn btn-primary" id="btn-exportPDF" onclick="gatedExportPDF()" style="justify-content:center;">🖨 正式輸出 PDF</button>
+        <button class="btn btn-ghost"   id="btn-exportJSON" onclick="gatedExportJSON()" style="justify-content:center;">{ } 下載 JSON 存檔</button>
+        <button class="btn btn-ghost"   id="btn-copyText" onclick="gatedCopyText()" style="justify-content:center;">⎘ 複製純文字報告</button>
       </div>
       <!-- v3.5.0 REVISE5 — export readiness warning -->
       <div id="s8-export-warn" style="display:none;opacity:0;font-size:13.5px;color:rgba(255,189,89,.88);line-height:1.55;padding:10px 0 2px;max-width:400px;transition:opacity .3s;"></div>
       <div style="margin-top:var(--sp-xl);padding:18px 22px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-sm);font-size:var(--t-helper);color:rgba(255,255,255,.28);line-height:1.7;">
         <span id="s8-disclaimer">本文件為創作者自行整理的版權紀錄，僅作為文件存檔與發行準備支援使用。不構成法律意見、著作權登記、發行商審核，亦不保證平台接受。</span>
       </div>
-      <div class="step-nav">
+      <div class="step-nav" style="flex-wrap:wrap;gap:8px;">
         <button class="btn btn-ghost" onclick="back(8)" data-i18n="btn-back">← 返回</button>
-        <button class="btn btn-ghost" id="btn-restart" onclick="restart()">↺ 新增另一首作品</button>
+        <button class="btn btn-ghost" id="s8-btn-clear" onclick="clearDraftNow()" data-i18n="btn-clear-draft">🗑 清除草稿</button>
+        <button class="btn btn-ghost" id="btn-restart" onclick="restart()" data-i18n="btn-restart">↺ 新增另一首作品</button>
       </div>
     </div>
 
@@ -2362,7 +2405,8 @@ const STRINGS = {
     's7-preview-title':'✦ Proof-of-Rights 文件摘要','btn-openDoc':'查看完整文件預覽','btn-back7':'← 返回修改',
     's7-helper':'◦ PDF 列印、JSON 下載、純文字複製請前往下一步「匯出文件」。','btn-goExport':'前往匯出 →',
     /* ── step 8 ── */
-    'final-ready':'— 文件已就緒 ✦','btn-openDocFull':'查看 / 列印完整文件',
+    'final-ready':'— 文件已就緒 ✦','btn-openDocFull':'🔍 預覽文件',
+    'btn-exportPDF':'🖨 正式輸出 PDF',
     'btn-exportJSON':'{ } 下載 JSON 存檔','btn-copyText':'⎘ 複製純文字報告',
     's8-disclaimer':'本文件為創作者自行整理的版權紀錄，僅作為文件存檔與發行準備支援使用。不構成法律意見、著作權登記、發行商審核，亦不保證平台接受。',
     'btn-restart':'↺ 新增另一首作品',
@@ -2572,7 +2616,8 @@ const STRINGS = {
     's7-preview-title':'✦ Proof-of-Rights Document Summary','btn-openDoc':'View full document preview','btn-back7':'← Back to edit',
     's7-helper':'◦ PDF print, JSON download, and plain text copy are in the next step — Export.','btn-goExport':'Go to Export →',
     /* ── step 8 ── */
-    'final-ready':'— Document ready ✦','btn-openDocFull':'View / Print full document',
+    'final-ready':'— Document ready ✦','btn-openDocFull':'🔍 Preview document',
+    'btn-exportPDF':'🖨 Export PDF (1 credit)',
     'btn-exportJSON':'{ } Download JSON archive','btn-copyText':'⎘ Copy plain text report',
     's8-disclaimer':'This document is a self-organized rights record prepared by the creator, intended for archiving and pre-release preparation only. It does not constitute legal advice, copyright registration, distributor review, or guarantee platform acceptance.',
     'btn-restart':'↺ Start a new work',
@@ -2757,7 +2802,7 @@ function setLang(lang){
     'btn-return':'btn-return','btn-evalReady':'btn-evalReady',
     'btn-openDoc':'btn-openDoc','btn-back7':'btn-back7','btn-goExport':'btn-goExport',
     'btn-openDocFull':'btn-openDocFull','btn-exportJSON':'btn-exportJSON',
-    'btn-copyText':'btn-copyText','btn-restart':'btn-restart',
+    'btn-copyText':'btn-copyText','btn-exportPDF':'btn-exportPDF','s8-free-label':'s8-free-label','s8-export-label':'s8-export-label','btn-restart':'btn-restart',
     /* v3.4.7 new IDs */
     'next-ver-badge':'next-ver-badge',
     'doc-bar-title':'doc-bar-title',
@@ -2983,22 +3028,43 @@ function saveDraftNow(){
   showDraftSavedMsg();
 }
 function clearDraftNow(){
-  const msg = (lang === 'zh')
-    ? '確定要清除草稿？此操作無法復原。'
-    : 'Clear saved draft? This cannot be undone.';
+  // REVISE8b: fixed — was using undefined `lang` (now currentLang), added full reset
+  const msg = (currentLang === 'en')
+    ? 'Clear saved draft? This cannot be undone.'
+    : '確定要清除草稿？此操作無法復原。';
   if(!confirm(msg)) return;
+
+  // 1. Clear localStorage
   try { localStorage.removeItem('propri_v346'); } catch(e){}
+
+  // 2. Reset data object
   D = {};
+
+  // 3. Clear all form fields
   document.querySelectorAll('[data-k]').forEach(el=>{
     el.type==='checkbox' ? el.checked=false : el.value='';
   });
+
+  // 4. Clear file chips
+  document.querySelectorAll('.fp-chip').forEach(chip=>{
+    chip.classList.remove('show');
+    chip.innerHTML = '';
+  });
+
+  // 5. Close doc overlay if open
+  const overlay = document.getElementById('doc-overlay');
+  if(overlay) overlay.classList.remove('show');
+
+  // 6. Reset Propi state + readiness panel
+  setState('idle');
   refreshPV();
-  const infoEl = document.getElementById('save-draft-msg');
-  if(infoEl){
-    infoEl.textContent = (lang==='zh') ? '草稿已清除。' : 'Draft cleared.';
-    infoEl.style.display='inline';
-    setTimeout(()=>{ infoEl.style.display='none'; }, 2500);
-  }
+
+  // 7. Go to Step 1
+  goTo(1);
+
+  // 8. Toast confirmation
+  const toastMsg = (currentLang === 'en') ? 'Draft cleared.' : '草稿已清除。';
+  toast(toastMsg);
 }
 
 
@@ -3609,6 +3675,16 @@ function checkExportReady(){
 function gatedOpenDoc(){   if(!checkExportReady()) return; gateExport(()=>openDoc()); }
 function gatedExportJSON(){ if(!checkExportReady()) return; gateExport(()=>exportJSON()); }
 function gatedCopyText(){  if(!checkExportReady()) return; gateExport(()=>copyText()); }
+function gatedExportPDF(){
+  // REVISE8b: Formal PDF export — charges 1 credit, then opens preview + triggers print
+  if(!checkExportReady()) return;
+  gateExport(()=>{
+    openDoc();
+    // Small delay to let doc render before print dialog
+    setTimeout(()=>{ window.print(); }, 500);
+  });
+}
+
 
 /* ── Redeem Modal ── */
 function openRedeemModal(){

@@ -1,71 +1,61 @@
 # AI Music Proof-of-Rights Generator
 
-**Version:** v3.5.0 CreditGate PortalyMVP — REVISE8
+**Version:** v3.5.0 CreditGate PortalyMVP — REVISE8b
 **Date:** 2026-05-30
-**Status:** ✅ Code QA 41/41 PASS · ⚠️ Mobile Visual QA Pending (real device)
+**Status:** ✅ Code QA 34/34 PASS · ⚠️ Mobile Visual QA Pending (real device)
 
 ---
 
 ## How to Open
 
 Open `index.html` in Chrome. No server required. Keep `assets/` in the same folder.
-
-For Vercel: deploy this folder as-is. `index.html` at root is served automatically.
-
----
-
-## Mobile Layout (REVISE8 — Single-Flow + Propi Floating Cursor)
-
-**Architecture change from REVISE7g/7h horizontal workspace.**
-
-After real-device testing confirmed that horizontal workspace approaches (REVISE7g/7h) were problematic on iOS Safari, REVISE8 adopts a single vertical content flow for mobile.
-
-**Mobile (≤ 900px):**
-- Left sidebar (`#sb`) hidden — no Propi card, no step list panel
-- Main form (`#mn`) is the full-width primary content
-- Readiness summary (`#pv`) shown below the main form
-- Layout order: Header → Stepper → Main Form → Readiness Summary → Draft Actions
-- No horizontal scrolling required
-- Propi becomes a **56px floating cursor** fixed at bottom-right, with a gentle bob animation
-- Language switch (`ZH/EN`) stays in the header — always visible
-- Clear draft button visible alongside Save draft
-
-**Desktop (> 900px):** Three-column layout unchanged — left sidebar, center form, right status panel.
+For Vercel: deploy this folder as-is.
 
 ---
 
-## Export Logic (REVISE8)
+## REVISE8b — Mobile Flow Hotfix
+
+Three bugs fixed from REVISE8:
+
+**1. Clear draft (root cause: undefined `lang` variable)**
+The `clearDraftNow()` function was calling `lang` (undefined) instead of `currentLang`, causing a silent ReferenceError. Fixed to use `currentLang`. Now also performs complete reset: clears localStorage, D object, all `[data-k]` fields, file chips, doc overlay, resets Propi state, navigates to Step 1, shows toast confirmation.
+
+**2. Step 7 nav — "前往匯出" now prominent**
+Step 7 nav restructured to: `← 返回 / 儲存草稿 / 前往匯出 →`. The "前往匯出" button is now the primary action in the nav row, not a secondary afterthought.
+
+**3. PDF preview scrollable on mobile**
+`#doc-overlay.show` on mobile changed from `display: flex` to `display: block` with `overflow-y: auto; -webkit-overflow-scrolling: touch`. `#proof-doc` gets `overflow: visible` on mobile. Full document is now vertically scrollable in the preview modal.
+
+---
+
+## Export Logic
 
 | Action | Credit charged? |
 |---|---|
-| 🖨 Preview / Print document | **No** — preview only |
-| { } Download JSON archive | **Yes** — formal export |
-| ⎘ Copy plain text report | **Yes** — formal export |
+| 🔍 Preview document | **No** — preview only |
+| 🖨 Export PDF (formal) | **Yes — 1 credit** |
+| { } Download JSON archive | **Yes — 1 credit** |
+| ⎘ Copy plain text report | **Yes — 1 credit** |
 
-`window.onafterprint` removed — unreliable on mobile Safari, not used for credit deduction.
+Step 8 layout: Preview (free) → Export PDF (1 credit) → JSON (1 credit) → Copy (1 credit) → Clear draft → New track
+
+---
+
+## Mobile Layout (Single-Flow, from REVISE8)
+
+- Left sidebar hidden. No horizontal scrolling.
+- Propri floating cursor at bottom-right (56px, bob animation, no text).
+- Language switch in header, always visible.
+- Clear draft button in Step 8 nav.
 
 ---
 
 ## Commercial Logic (CreditGate)
 
-| | |
-|---|---|
-| Free trial | 1 formal export |
-| Paid export | 1 credit = 1 export |
-| Starter Pack | US$5 = 6 credits |
-| Creator Pack | US$20 = 25 credits |
-| Payment | Portaly (`https://portaly.cc/kaola`) — replace before launch |
-| Export gate | JSON + Copy gated · PDF/Print ungated |
-
-> Redemption codes are removed from this public package. Configure private codes before deployment.
-
----
-
-## Required Fields
-
-**Step 1 — Work Identity (7 required):** Track Title, Artist Name, Release Type, Version Name, Language, Genre & Mood, Release Date
-
-**Step 4 — Ownership & Rights (10 required):** Master Owner, Composition Owner, Lyricist, Composer, Producer, Performer, Featured Artist, Royalty Split, Sample Use, Cover Art Rights
+- Free trial: 1 formal export
+- Starter Pack: US$5 = 6 credits · Creator Pack: US$20 = 25 credits
+- Payment: Portaly (`https://portaly.cc/kaola`) — replace before launch
+- Redemption codes removed from this public package
 
 ---
 
@@ -73,17 +63,5 @@ After real-device testing confirmed that horizontal workspace approaches (REVISE
 
 ```
 index.html
-assets/propi/propri_main.png
-assets/propi/propri_front.png
-assets/propi/propri_focus.png
-assets/propi/propri_side.png
+assets/propi/propri_main.png / propri_front.png / propri_focus.png / propri_side.png
 ```
-
----
-
-## Prototype Limitations
-
-- localStorage is bypassable via DevTools
-- No server-side validation
-- Portaly URL is a placeholder
-- No batch/multi-track export (planned v4)

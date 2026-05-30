@@ -1,63 +1,46 @@
 # CHANGELOG
 
-## v3.5.0 REVISE8 — 2026-05-30
+## v3.5.0 REVISE8b — 2026-05-30
 
-### Architecture Change: Mobile Single-Flow + Propi Floating Cursor
+### Mobile Flow Hotfix (3 bugs from REVISE8)
 
-Real-device QA on REVISE7g and REVISE7h confirmed that horizontal workspace approaches are unreliable on iOS Safari. REVISE8 abandons horizontal workspace for mobile entirely.
+**Bug 1 — Clear draft not working (root cause: `lang` undefined)**
+`clearDraftNow()` referenced `lang` which is not a global variable (correct variable: `currentLang`). This caused a silent ReferenceError on every call, making the button appear to do nothing. Fixed + expanded:
+- `lang` → `currentLang`
+- Clears `propri_v346` from localStorage
+- Resets `D = {}`
+- Clears all `[data-k]` form fields (input/select/textarea/checkbox)
+- Clears all `.fp-chip` file attachment chips
+- Removes doc overlay if open
+- Calls `setState('idle')` + `refreshPV()`
+- Navigates to Step 1 via `goTo(1)`
+- Shows toast: "草稿已清除。" / "Draft cleared."
 
-**Mobile layout (≤ 900px):**
-- Left sidebar (`#sb`) hidden via `display: none !important`
-- `.ws-scroll` becomes `display: block` (no overflow-x, no scroll-snap)
-- `.ws-inner` becomes `flex-direction: column` — stacks sb→mn→pv vertically
-- `#mn` full width, normal vertical scroll
-- `#pv` (readiness summary) shown below `#mn` as a static block
-- No horizontal gesture required
+**Bug 2 — Step 7 blocked (nav restructured)**
+Step 7 navigation was `<div></div>` + "前往匯出" — the empty div made the layout confusing and on mobile the primary action was not obvious. Restructured to a clear 3-button row: `← 返回 / 儲存草稿 / 前往匯出 →`
 
-**Propi floating cursor:**
-- New `<div class="propi-float" id="propri-float">` fixed at `bottom: 24px; right: 16px`
-- 56×56px, `propri_main.png`, circular drop-shadow
-- `@keyframes propri-bob` — gentle 10px float every 3s
-- `pointer-events: none` — does not intercept taps
-- Hidden on desktop via `@media (min-width: 901px)`
+**Bug 3 — PDF preview not scrollable on mobile**
+`#doc-overlay.show` was `display: flex` which caused flex-container scroll issues on iOS Safari. Changed to `display: block` on mobile with explicit `overflow-y: auto; -webkit-overflow-scrolling: touch`. `#proof-doc` gets `overflow: visible; max-height: none` on mobile so full document content is accessible.
 
-**Language switch:** Already in `#hd` header — visible on mobile by default. No change required.
+**Step 8 export restructure:**
+- Added separate `🔍 預覽文件` button (free, calls `openDoc()`)
+- Added `🖨 正式輸出 PDF` button (1 credit, calls `gatedExportPDF()`)
+- `gatedExportPDF()`: gates credit → `openDoc()` + `setTimeout(print, 500ms)`
+- JSON and Copy remain separately gated
+- Clear draft + New track buttons in Step 8 nav
 
-**Clear draft button (REVISE8 new):**
-- `clearDraftNow()` function added — confirms, clears `propri_v346` localStorage, resets D object and all fields
-- `#btn-clear-draft` added to `#save-draft-area` alongside Save draft
-- i18n: `btn-clear-draft` → `清除草稿` / `Clear draft`
-- `#save-draft-area` forced visible on mobile via CSS `display: flex !important`
-
-**PDF/Print credit fix:**
-- `btn-openDocFull` now calls `openDoc()` directly — no credit gate
-- `window.onafterprint` removed from `openDoc()` — unreliable on mobile Safari
-- JSON export (`gatedExportJSON()`) still credit-gated
-- Copy plain text (`gatedCopyText()`) still credit-gated
-- Button text updated: "預覽 / 列印文件" / "下載 JSON 存檔（正式輸出）" / "複製純文字報告（正式輸出）"
-
-**Desktop unchanged:**
-- `.ws-scroll { grid-area: ws; display: flex }` — desktop three-column intact
-- `.ws-inner { grid-template-columns: 330px 1fr 330px }` — intact
-- All REVISE7e core functions untouched
+**Unchanged from REVISE8:**
+- Mobile single-flow layout (#sb hidden, #pv below #mn)
+- Propi floating cursor (56px, bottom-right, bob animation)
+- Language switch in header
+- Desktop three-column layout
+- Required field validation (Step 1 × 7, Step 4 × 10)
+- Save draft / CreditGate / gateExport logic
+- afterprint NOT used for credit deduction
 
 ---
 
-## v3.5.0 REVISE7h — 2026-05-29 (Rejected — iOS cannot swipe)
-
-- Dedicated `.ws-scroll` wrapper as horizontal scroll container
-- `html/body` not locked — but swipe still unreliable on iPhone Safari in testing
-
+## v3.5.0 REVISE8 — 2026-05-30 (Mobile Single-Flow architecture)
+## v3.5.0 REVISE7h — 2026-05-29 (Rejected — iOS swipe unreliable)
 ## v3.5.0 REVISE7g — 2026-05-29 (Rejected — iOS scroll lock)
-
-- `html,body { overflow:hidden }` locked all touch scroll on iPhone
-
-## v3.5.0 REVISE7f — 2026-05-29 (Rejected — propri clipped)
-
 ## v3.5.0 REVISE7e — 2026-05-29 (Desktop checkpoint)
-
-- Step list internal scroll, required * markers, TBD date button
-
-## v3.5.0 CreditGate PortalyMVP — 2026-05-27
-
-- Credit system, Portaly link, export gate
