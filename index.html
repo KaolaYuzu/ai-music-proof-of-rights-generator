@@ -971,7 +971,7 @@ textarea { resize: vertical; min-height: 100px; }
   box-shadow:
     0 40px 100px rgba(0,0,0,.75),
     0 0 0 1px rgba(122,92,255,.15);
-  position: relative; overflow: hidden;
+  position: relative; overflow: visible;
 }
 /* top accent band */
 #proof-doc::before {
@@ -1083,11 +1083,20 @@ textarea { resize: vertical; min-height: 100px; }
 
 /* print */
 @media print {
-  body { background: #fff !important; }
+  html, body { background: #fff !important; height: auto !important; overflow: visible !important; }
   #app, #welcome { display: none !important; }
-  #doc-overlay { display: block !important; background: #fff !important; padding: 0; }
+  #doc-overlay {
+    display: block !important; background: #fff !important; padding: 0;
+    position: static !important; overflow: visible !important;
+    height: auto !important; max-height: none !important;
+  }
   .doc-bar, .doc-bar-actions { display: none !important; }
-  #proof-doc { box-shadow: none; border-radius: 0; max-width: 100%; }
+  #proof-doc {
+    box-shadow: none; border-radius: 0; max-width: 100%;
+    overflow: visible !important; height: auto !important; max-height: none !important;
+  }
+  .doc-section { page-break-inside: avoid; }
+  .doc-footer { page-break-after: avoid; }
 }
 /* scrollbar */
 ::-webkit-scrollbar { width: 5px; }
@@ -1539,6 +1548,18 @@ html[lang="en"] .save-pill {
   50%      { transform: translateY(-10px); }
 }
 
+  /* ── v3.6.2: field helper text ── */
+  .field-helper {
+    display: block;
+    font-size: var(--t-helper);
+    color: rgba(255,255,255,.40);
+    line-height: 1.55;
+    margin-top: 5px;
+  }
+  /* ── v3.6.2: safe-area bottom fix ── */
+  .step-nav {
+    padding-bottom: max(var(--sp-sm), env(safe-area-inset-bottom, 0px));
+  }
   /* ── REVISE8b: PDF preview modal scroll on mobile ── */
   #doc-overlay {
     overflow-y: auto !important;
@@ -1692,14 +1713,11 @@ html[lang="en"] .save-pill {
   <div class="doc-bar">
     <span class="doc-bar-title" id="doc-bar-title">✦ Proof-of-Rights 文件預覽</span>
     <div class="doc-bar-actions">
-      <button class="btn btn-ghost" onclick="window.print()" id="doc-btn-print" style="font-size:13px;padding:9px 18px;">🖨 列印 / PDF</button>
-      <button class="btn btn-ghost" onclick="exportJSON()" id="doc-btn-json" style="font-size:13px;padding:9px 18px;">{ } JSON</button>
-      <button class="btn btn-ghost" onclick="copyText()" id="doc-btn-copy" style="font-size:13px;padding:9px 18px;">⎘ 複製</button>
-      <button class="btn btn-primary" onclick="closeDoc()" id="doc-btn-close" style="font-size:13px;padding:9px 20px;">✕ 關閉</button>
+      <button class="btn btn-primary" onclick="closeDoc()" id="doc-btn-close" style="font-size:13px;padding:9px 20px;">✕ 關閉 / Close</button>
     </div>
   </div>
   <div id="proof-doc">
-    <div class="doc-brandline">AI Music Proof-of-Rights Generator · Guided Rights QA Journal · v3.4.8</div>
+    <div class="doc-brandline">AI Music Proof-of-Rights Generator · Guided Rights QA Journal · v3.6.2</div>
     <div class="doc-maintitle" id="d-title">Proof-of-Rights Document</div>
     <div class="doc-subtitle"  id="d-sub">AI Music Creator Rights Record</div>
     <div class="doc-meta">
@@ -1819,17 +1837,17 @@ html[lang="en"] .save-pill {
       <div class="fields">
         <div class="f2">
           <div class="field"><label><span data-i18n="l-trackTitle">曲名</span> <span class="req">*</span></label><input type="text" id="trackTitle" placeholder="e.g. Moonlight Protocol" data-k="trackTitle"/></div>
-          <div class="field"><label><span data-i18n="l-artistName">演出者</span> <span class="req">*</span></label><input type="text" id="artistName" placeholder="e.g. Kaola Yuzu" data-k="artistName"/></div>
+          <div class="field"><label><span data-i18n="l-artistName">演唱者</span> <span class="req">*</span></label><input type="text" id="artistName" placeholder="例如：ABU / Kaola Yuzu" data-k="artistName"/><span class="field-helper" data-i18n="h-artistName">若是個人歌手，填歌手名；若是 AI artist，填對外使用的 artist name。</span></div>
         </div>
         <div class="f2">
           <div class="field"><label><span data-i18n="l-releaseType">發行類型</span> <span class="req">*</span></label>
-            <select id="releaseType" data-k="releaseType"><option value="">選擇</option><option>Single</option><option>EP</option><option>Album</option><option>Remix</option><option>Instrumental</option><option>Cover</option></select></div>
-          <div class="field"><label><span data-i18n="l-versionName">版本名稱</span> <span class="req">*</span></label><input type="text" id="versionName" placeholder="e.g. Acoustic Mix" data-k="versionName"/></div>
+            <select id="releaseType" data-k="releaseType"><option value="">選擇</option><option>Single</option><option>EP</option><option>Album</option><option>Remix</option><option>Instrumental</option><option>Cover</option></select><span class="field-helper" data-i18n="h-releaseType">選擇這首作品預計或實際發行的形式，例如 Single、EP、Album、Instrumental。</span></div>
+          <div class="field"><label><span data-i18n="l-versionName">版本名稱</span> <span class="req">*</span></label><input type="text" id="versionName" placeholder="例如：Original Version / Theatrical Cut" data-k="versionName"/><span class="field-helper" data-i18n="h-versionName">用來區分同一首歌的不同版本。若只有一個正式版本，可填 Original Version。</span></div>
         </div>
         <div class="f2">
           <div class="field"><label><span data-i18n="l-language">語言</span> <span class="req">*</span></label>
-            <select id="language" data-k="language"><option value="">選擇</option><option>中文</option><option>English</option><option>日本語</option><option>Instrumental</option><option>其他</option></select></div>
-          <div class="field"><label><span data-i18n="l-genre">風格 / 情感</span> <span class="req">*</span></label><input type="text" id="genre" placeholder="e.g. Ambient / Melancholic" data-k="genre"/></div>
+            <select id="language" data-k="language"><option value="">選擇</option><option>中文</option><option>English</option><option>日本語</option><option>Instrumental</option><option>其他</option></select><span class="field-helper" data-i18n="h-language">填寫歌詞主要語言；若是純音樂可選 Instrumental。</span></div>
+          <div class="field"><label><span data-i18n="l-genre">風格 / 情感</span> <span class="req">*</span></label><input type="text" id="genre" placeholder="e.g. cinematic alt-pop / melancholic" data-k="genre"/><span class="field-helper" data-i18n="h-genre">填寫音樂風格與情緒方向，例如 cinematic alt-pop、emotional electronic pop、melancholic、hopeful。</span></div>
         </div>
         <div class="field">
           <label><span data-i18n="l-releaseDate">預計發行日期</span> <span class="req">*</span></label>
@@ -1844,7 +1862,7 @@ html[lang="en"] .save-pill {
           <span id="date-helper" style="font-size:var(--t-helper);color:rgba(255,255,255,.48);display:block;margin-top:6px;line-height:1.5;">例如：2026-05-28。若尚未確定，請點「尚未確定」按鈕或直接填入文字。</span>
         </div>
       </div>
-      <div class="notice" id="n1"><span class="notice-ico">○</span><span data-i18n="n1-text">曲名和演出者是必填欄位，文件才能正確建立。</span></div>
+      <div class="notice" id="n1"><span class="notice-ico">○</span><span data-i18n="n1-text">曲名和演唱者是必填欄位，文件才能正確建立。</span></div>
       <div class="step-nav">
         <button class="btn btn-ghost" disabled data-i18n="btn-back-disabled">← 返回</button>
         <button class="btn btn-primary" onclick="go(1,true)" data-i18n="btn-continue">繼續 →</button>
@@ -2116,6 +2134,7 @@ html[lang="en"] .save-pill {
         <div id="r-chip"></div>
         <div id="r-detail" style="font-size:var(--t-helper);color:rgba(255,255,255,.42);margin-top:10px;line-height:1.65;"></div>
       </div>
+      <div id="evidence-ext-notice" style="margin-top:var(--sp-md);padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:var(--r-sm);font-size:var(--t-helper);color:rgba(255,255,255,.40);line-height:1.7;" data-i18n="evidence-ext-notice">📎 本文件記錄證據檔案與創作流程。若發行商、平台或申訴流程需要完整佐證，請將 Suno 迭代截圖、AI 使用紀錄、LANDR 截圖、音訊檔與封面權利資料一併另行上傳或保存。</div>
       <div class="step-nav">
         <button class="btn btn-ghost" onclick="back(6)" data-i18n="btn-back">← 返回</button>
         <button class="btn btn-primary" id="btn-evalReady" onclick="evalReady()">評估整備狀態 →</button>
@@ -2130,6 +2149,7 @@ html[lang="en"] .save-pill {
         <div class="step-en">Preview &amp; Review</div>
         <div class="step-tone">文件草稿已就緒。請確認內容是否正確，有需要修改可以點左側步驟回頭調整，確認沒問題再前往匯出。</div>
       </div>
+      <div style="font-size:var(--t-body);color:rgba(255,255,255,.45);padding:12px 16px;background:rgba(122,92,255,.08);border:1px solid rgba(122,92,255,.20);border-radius:8px;line-height:1.65;margin-bottom:var(--sp-sm);" id="s7-summary-hint" data-i18n="s7-summary-hint">此處為重點摘要。請點擊「查看完整文件預覽」確認完整文件內容。</div>
       <div class="embed-preview">
         <h4 id="s7-preview-title">✦ Proof-of-Rights 文件摘要</h4>
         <div id="doc-sum" style="font-size:var(--t-body);color:rgba(255,255,255,.58);line-height:1.85;"></div>
@@ -2166,13 +2186,14 @@ html[lang="en"] .save-pill {
         <div style="font-size:11px;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.07em;padding-top:4px;" id="s8-free-label">預覽（免費 · 不扣點）</div>
         <button class="btn btn-ghost" id="btn-openDocFull" onclick="openDoc()" style="justify-content:center;" title="Preview document — no credit charged">🔍 預覽文件</button>
         <div style="font-size:11px;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.07em;padding-top:8px;" id="s8-export-label">正式輸出（各扣 1 點）</div>
-        <button class="btn btn-primary" id="btn-exportPDF" onclick="gatedExportPDF()" style="justify-content:center;">🖨 正式輸出 PDF</button>
-        <button class="btn btn-ghost"   id="btn-exportJSON" onclick="gatedExportJSON()" style="justify-content:center;">{ } 下載 JSON 存檔</button>
-        <button class="btn btn-ghost"   id="btn-copyText" onclick="gatedCopyText()" style="justify-content:center;">⎘ 複製純文字報告</button>
+        <button class="btn btn-primary" id="btn-exportPDF" onclick="gatedExportPDF()" style="justify-content:center;" data-i18n="btn-exportPDF">🖨 正式輸出 PDF（扣 1 credit）</button>
+        <button class="btn btn-ghost"   id="btn-exportJSON" onclick="gatedExportJSON()" style="justify-content:center;" data-i18n="btn-exportJSON">{ } 下載 JSON 存檔（扣 1 credit）</button>
+        <button class="btn btn-ghost"   id="btn-copyText" onclick="gatedCopyText()" style="justify-content:center;" data-i18n="btn-copyText">⎘ 複製純文字報告（扣 1 credit）</button>
       </div>
       <!-- v3.5.0 REVISE5 — export readiness warning -->
       <div id="s8-export-warn" style="display:none;opacity:0;font-size:13.5px;color:rgba(255,189,89,.88);line-height:1.55;padding:10px 0 2px;max-width:400px;transition:opacity .3s;"></div>
-      <div style="margin-top:var(--sp-xl);padding:18px 22px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-sm);font-size:var(--t-helper);color:rgba(255,255,255,.28);line-height:1.7;">
+      <div id="s8-evidence-notice" style="margin-top:var(--sp-md);padding:14px 18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:var(--r-sm);font-size:var(--t-helper);color:rgba(255,255,255,.40);line-height:1.7;" data-i18n="evidence-ext-notice">📎 本文件記錄證據檔案與創作流程。若發行商、平台或申訴流程需要完整佐證，請將 Suno 迭代截圖、AI 使用紀錄、LANDR 截圖、音訊檔與封面權利資料一併另行上傳或保存。</div>
+      <div style="margin-top:var(--sp-md);padding:18px 22px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-sm);font-size:var(--t-helper);color:rgba(255,255,255,.28);line-height:1.7;">
         <span id="s8-disclaimer">本文件為創作者自行整理的版權紀錄，僅作為文件存檔與發行準備支援使用。不構成法律意見、著作權登記、發行商審核，亦不保證平台接受。</span>
       </div>
       <div class="step-nav" style="flex-wrap:wrap;gap:8px;">
@@ -2358,10 +2379,20 @@ const STRINGS = {
     's7-title':'預覽與確認','s7-en':'Preview & Review','s7-tone':'文件草稿已就緒。請確認內容是否正確，有需要修改可以點左側步驟回頭調整，確認沒問題再前往匯出。',
     's8-title':'匯出文件','s8-en':'Export','s8-tone':'完成了。這份文件可以列印、保存，或作為發行前的權利紀錄。',
     /* ── step 1 ── */
-    'l-trackTitle':'曲名','l-artistName':'演出者','l-releaseType':'發行類型',
+    'l-trackTitle':'曲名','l-artistName':'演唱者','l-releaseType':'發行類型',
     'l-versionName':'版本名稱','l-language':'語言','l-genre':'風格 / 情感','l-releaseDate':'預計發行日期',
     'date-helper':'例如：2026-05-28。若尚未確定，可以先留空。',
-    'n1-text':'曲名和演出者是必填欄位，文件才能正確建立。',
+    'n1-text':'曲名和演唱者是必填欄位，文件才能正確建立。',
+    'h-artistName':'若是個人歌手，填歌手名；若是 AI artist，填對外使用的 artist name。例如：ABU / Kaola Yuzu',
+    'h-versionName':'用來區分同一首歌的不同版本。若只有一個正式版本，可填 Original Version。若是混音版、劇場版，可填 Acoustic Mix、Theatrical Cut 等。',
+    'h-releaseType':'選擇這首作品預計或實際發行的形式，例如 Single、EP、Album、Instrumental。',
+    'h-language':'填寫歌詞主要語言，例如中文、English、日本語；若是純音樂可選 Instrumental。',
+    'h-genre':'填寫音樂風格與情緒方向，例如 cinematic alt-pop、emotional electronic pop、melancholic、hopeful。',
+    's7-summary-hint':'此處為重點摘要。請點擊「查看完整文件預覽」確認完整文件內容。',
+    'evidence-ext-notice':'📎 本文件記錄證據檔案與創作流程。若發行商、平台或申訴流程需要完整佐證，請將 Suno 迭代截圖、AI 使用紀錄、LANDR 截圖、音訊檔與封面權利資料一併另行上傳或保存。',
+    'btn-exportPDF':'🖨 正式輸出 PDF（扣 1 credit）',
+    'btn-exportJSON':'{ } 下載 JSON 存檔（扣 1 credit）',
+    'btn-copyText':'⎘ 複製純文字報告（扣 1 credit）',
     'btn-back-disabled':'← 返回','btn-continue':'繼續 →','btn-back':'← 返回',
     /* ── step 2 ── */
     'l-creationMode':'創作模式','l-inspiration':'靈感 / 發想起源','l-ideaDate':'靈感開始的時間',
@@ -2569,7 +2600,7 @@ const STRINGS = {
     's7-title':'Preview & Review','s7-en':'Preview & Review','s7-tone':'Your draft is ready. Review the content, make any adjustments by clicking the steps on the left, then proceed to export.',
     's8-title':'Export Document','s8-en':'Export','s8-tone':'Done. This document can be printed, saved, or kept as a pre-release rights record.',
     /* ── step 1 ── */
-    'l-trackTitle':'Track Title','l-artistName':'Artist Name','l-releaseType':'Release Type',
+    'l-trackTitle':'Track Title','l-artistName':'Performer / Lead Artist','l-releaseType':'Release Type',
     'l-versionName':'Version Name','l-language':'Language','l-genre':'Genre / Mood','l-releaseDate':'Expected Release Date',
     'date-helper':'e.g. 2026-05-28. Leave blank if not confirmed yet.',
     'n1-text':'Track title and artist name are required to generate the document.',
@@ -2588,6 +2619,16 @@ const STRINGS = {
     /* ── step 4 ── */
     'l-masterOwner':'Master Recording Owner','l-compositionOwner':'Composition Owner','l-lyricist':'Lyricist','l-composer':'Composer',
     'l-producer':'Producer','l-performer':'Performer / Lead Artist','l-featured':'Featured Artist (if any)','l-splitNotes':'Royalty split notes',
+    'h-artistName':'If you are the performing artist, enter your artist name. For AI-generated music, use the public-facing artist name. e.g. ABU / Kaola Yuzu',
+    'h-versionName':'Use this to identify different versions of the same work. If there is only one official version, use Original Version. For alternate cuts, use Acoustic Mix, Theatrical Cut, End Credits Cut, etc.',
+    'h-releaseType':'Select the release format, such as Single, Album, EP, Instrumental, or Demo.',
+    'h-language':'Enter the main lyric language, such as English, Mandarin Chinese, or Japanese. For instrumental works, use Instrumental.',
+    'h-genre':'Describe the musical style and emotional direction, such as cinematic alt-pop, emotional electronic pop, melancholic, hopeful, dark, or intimate.',
+    's7-summary-hint':'This is a review summary. Open the full document preview to check the complete record.',
+    'evidence-ext-notice':'📎 This document records the evidence trail and file references. If a distributor, platform, or rights review requires full proof, upload or archive the supporting files separately, including Suno iteration screenshots, AI usage records, LANDR screenshots, audio files, and cover art rights materials.',
+    'btn-exportPDF':'🖨 Formal PDF Export (Uses 1 credit)',
+    'btn-exportJSON':'{ } Download JSON Archive (Uses 1 credit)',
+    'btn-copyText':'⎘ Copy Plain Text Report (Uses 1 credit)',
     'l-sampleUse':'Sample Use','sampleUse-helper':'"Sampling" means using part of an existing sound recording, melody, vocal, beat, rhythm loop, or another work inside this release. Not all AI music involves sampling — if you only used AI to generate completely new melodies or sounds, you can typically choose "No samples".',
     'l-artworkOwner':'Cover Art Rights','artworkOwner-helper':'If the source is unclear, confirm rights before submitting. "Needs documentation" means the item is pending — the document will be marked as incomplete.',
     'l-agreementStatus':'Agreement Status','s4-creator-div':'Creator Declaration',
