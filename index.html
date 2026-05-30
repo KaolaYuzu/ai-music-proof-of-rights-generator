@@ -1717,7 +1717,7 @@ html[lang="en"] .save-pill {
     </div>
   </div>
   <div id="proof-doc">
-    <div class="doc-brandline">AI Music Proof-of-Rights Generator · Guided Rights QA Journal · v3.6.2</div>
+    <div class="doc-brandline">AI Music Proof-of-Rights Generator · Guided Rights QA Journal · v3.6.3</div>
     <div class="doc-maintitle" id="d-title">Proof-of-Rights Document</div>
     <div class="doc-subtitle"  id="d-sub">AI Music Creator Rights Record</div>
     <div class="doc-meta">
@@ -2206,8 +2206,9 @@ html[lang="en"] .save-pill {
 
   <!-- v3.5.0 CreditGate REVISE3 — Inline credit status line -->
   <div id="credit-statusline" class="credit-status-row">
-    <span class="cs-label" id="cs-trial-label">免費試用</span>：<span class="value" id="cs-trial-val">可使用</span><span class="cs-sep">·</span><span class="cs-label" id="cs-balance-label">剩餘點數</span>：<span class="value" id="cs-balance-val">0</span><span class="cs-sep">·</span><button onclick="buyCredits()" id="crd-btn-buy">購買點數</button><span class="cs-sep">·</span><button onclick="openRedeemModal()" id="crd-btn-redeem">兌換碼</button>
+    <span class="cs-label" id="cs-trial-label">免費試用</span>：<span class="value" id="cs-trial-val">可使用</span><span class="cs-sep">·</span><span class="cs-label" id="cs-balance-label">剩餘點數</span>：<span class="value" id="cs-balance-val">0</span><span class="cs-sep">·</span><button onclick="buyCredits()" id="crd-btn-buy">購買點數</button><span class="cs-sep">·</span><button onclick="openRedeemModal()" id="crd-btn-redeem">兌換碼</button><span class="cs-sep">·</span><button onclick="openRestoreModal()" id="crd-btn-restore" data-i18n="btn-restore">恢復點數</button>
   </div>
+  <div id="credit-hint" style="font-size:11px;color:rgba(255,255,255,.28);text-align:center;line-height:1.55;padding:4px 8px 0;max-width:680px;margin:0 auto;" data-i18n="credit-hint">目前點數會保存在此瀏覽器。若使用私密瀏覽、換裝置或清除瀏覽資料，可用「恢復點數」功能找回。</div>
   <!-- REVISE7: Manual save draft row -->
   <div id="save-draft-area" style="display:none;text-align:center;margin:8px 0 4px 0;">
     <button id="btn-save-draft" onclick="saveDraftNow()"
@@ -2383,6 +2384,8 @@ const STRINGS = {
     'l-versionName':'版本名稱','l-language':'語言','l-genre':'風格 / 情感','l-releaseDate':'預計發行日期',
     'date-helper':'例如：2026-05-28。若尚未確定，可以先留空。',
     'n1-text':'曲名和演唱者是必填欄位，文件才能正確建立。',
+    'btn-restore':'恢復點數',
+    'credit-hint':'目前點數會保存在此瀏覽器。若使用私密瀏覽、換裝置或清除瀏覽資料，可用「恢復點數」功能找回。',
     'h-artistName':'若是個人歌手，填歌手名；若是 AI artist，填對外使用的 artist name。例如：ABU / Kaola Yuzu',
     'h-versionName':'用來區分同一首歌的不同版本。若只有一個正式版本，可填 Original Version。若是混音版、劇場版，可填 Acoustic Mix、Theatrical Cut 等。',
     'h-releaseType':'選擇這首作品預計或實際發行的形式，例如 Single、EP、Album、Instrumental。',
@@ -2624,6 +2627,8 @@ const STRINGS = {
     'h-releaseType':'Select the release format, such as Single, Album, EP, Instrumental, or Demo.',
     'h-language':'Enter the main lyric language, such as English, Mandarin Chinese, or Japanese. For instrumental works, use Instrumental.',
     'h-genre':'Describe the musical style and emotional direction, such as cinematic alt-pop, emotional electronic pop, melancholic, hopeful, dark, or intimate.',
+    'btn-restore':'Restore Credits',
+    'credit-hint':'Credits are stored in this browser. If you use private browsing, switch devices, or clear browser data, you may need to use Restore Credits.',
     's7-summary-hint':'This is a review summary. Open the full document preview to check the complete record.',
     'evidence-ext-notice':'📎 This document records the evidence trail and file references. If a distributor, platform, or rights review requires full proof, upload or archive the supporting files separately, including Suno iteration screenshots, AI usage records, LANDR screenshots, audio files, and cover art rights materials.',
     'btn-exportPDF':'🖨 Formal PDF Export (Uses 1 credit)',
@@ -3786,6 +3791,16 @@ function _updateRedeemLang(){
 }
 
 /* ── v3.6.1 TestableMVP — error reason → UI message map ── */
+const RESTORE_ERROR_MSG = {
+  missing_code:  { zh: '請輸入兌換碼。',                              en: 'Please enter a redemption code.' },
+  invalid_code:  { zh: '找不到此兌換碼（注意大小寫及空格）。',              en: 'Code not found (check case and spaces).' },
+  not_redeemed:  { zh: '此兌換碼尚未兌換，無法恢復點數。',                 en: 'This code has not been redeemed yet.' },
+  email_mismatch:{ zh: '電子信箱與兌換時的信箱不符。',                    en: 'Email does not match the email used when this code was redeemed.' },
+  inactive:      { zh: '此兌換碼已停用，請聯繫客服。',                     en: 'This code is no longer active.' },
+  network_error: { zh: '網路錯誤，請稍後再試。',                          en: 'Network error. Please try again.' },
+  server_error:  { zh: '伺服器錯誤，請稍後再試。',                        en: 'Server error. Please try again.' }
+};
+
 const REDEEM_ERROR_MSG = {
   missing_code:     { zh: '請輸入兌換碼。',                       en: 'Please enter a redeem code.' },
   invalid_code:     { zh: '無效的兌換碼（注意大小寫及空格）。',       en: 'Invalid code (check case and spaces).' },
@@ -3802,7 +3817,18 @@ async function redeemViaAPI(code, email) {
   // No Content-Type header — avoids CORS preflight on Apps Script endpoints
   const res = await fetch(REDEEM_API_URL, {
     method: 'POST',
-    body: JSON.stringify({ code, email: email || '' })  /* code sent as-is, NOT trimmed */
+    body: JSON.stringify({ action: 'redeem', code, email: email || '' })
+  });
+  if (!res.ok) throw new Error('http_' + res.status);
+  return await res.json();
+}
+
+/* ── v3.6.3: restore → Apps Script ── */
+async function restoreViaAPI(code, email) {
+  // No Content-Type header — avoids CORS preflight
+  const res = await fetch(REDEEM_API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'restore', code, email: email || '' })
   });
   if (!res.ok) throw new Error('http_' + res.status);
   return await res.json();
@@ -3875,12 +3901,12 @@ async function submitRedeem(){
       _cgSet(CREDIT_KEY, newBalance);
       _cgSet(REDEEMED_KEY, [...redeemedCodes, code]);
       input.classList.add('valid');
-      msg.textContent = isEn
-        ? `✦ Success! +${credits} credits added. Balance: ${newBalance}.`
-        : `✦ 兌換成功！已加入 ${credits} 點。目前餘額：${newBalance} 點。`;
+      msg.innerHTML = isEn
+        ? `✦ Credits have been added to this device. +${credits} credits. Balance: ${newBalance}.<br><span style="font-size:11px;opacity:.7;">If you switch devices or clear browser data, keep your redemption code and email for recovery.</span>`
+        : `✦ 點數已加入此裝置。+${credits} 點，餘額：${newBalance} 點。<br><span style="font-size:11px;opacity:.7;">若之後換裝置或清除瀏覽資料，請保留兌換碼與電子信箱以便恢復。</span>`;
       msg.className = 'cg-msg ok';
       renderCreditCard();
-      setTimeout(closeRedeemModal, 2400);
+      setTimeout(closeRedeemModal, 3200);
     } else {
       input.classList.add('invalid');
       const reason = result.reason || 'server_error';
@@ -3928,6 +3954,95 @@ function _updateGateLang(){
 }
 
 /* ── Buy Credits — v3.6 Coming Soon (payment link not live yet) ── */
+/* ── v3.6.3: Restore Credits modal ── */
+function openRestoreModal(){
+  const overlay = document.getElementById('restore-overlay');
+  const input   = document.getElementById('rst-input');
+  const msg     = document.getElementById('rst-msg');
+  if(!overlay) return;
+  overlay.classList.add('show');
+  if(input){ input.value = ''; input.classList.remove('invalid','valid'); }
+  if(msg){ msg.textContent = ''; msg.className = 'cg-msg'; }
+  /* i18n labels */
+  const isEn = currentLang === 'en';
+  const ids = {
+    'rst-title':      isEn ? 'Restore Credits'                          : '恢復點數',
+    'rst-sub':        isEn ? 'If credits disappeared after switching devices, browsers, or private browsing, enter your redemption code and email to restore.' : '如果你換了裝置、瀏覽器，或使用私密瀏覽導致點數沒有顯示，可以用兌換碼與電子信箱嘗試恢復。',
+    'rst-btn-cancel': isEn ? 'Cancel' : '取消',
+    'rst-btn-submit': isEn ? 'Restore' : '恢復'
+  };
+  Object.entries(ids).forEach(([id, txt]) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = txt;
+  });
+  if(input) input.focus();
+}
+function closeRestoreModal(){
+  const overlay = document.getElementById('restore-overlay');
+  if(overlay) overlay.classList.remove('show');
+}
+
+function _setRestoreBtn(disabled){
+  const btn = document.getElementById('rst-btn-submit');
+  if(btn){ btn.disabled = disabled; btn.style.opacity = disabled ? '0.5' : ''; }
+}
+
+async function submitRestore(){
+  const input    = document.getElementById('rst-input');
+  const emailInp = document.getElementById('rst-email');
+  const msg      = document.getElementById('rst-msg');
+  const code     = (input ? input.value : '') || '';  // NOT trimmed
+  const email    = emailInp ? (emailInp.value || '').trim() : '';
+  const isEn     = currentLang === 'en';
+
+  if(!code){
+    if(msg){ msg.textContent = isEn ? 'Please enter a redemption code.' : '請輸入兌換碼。'; msg.className = 'cg-msg err'; }
+    return;
+  }
+
+  if(!REDEEM_API_URL || REDEEM_API_URL === 'PASTE_APPS_SCRIPT_WEB_APP_URL_HERE'){
+    if(input) input.classList.add('invalid');
+    if(msg){ msg.textContent = isEn ? 'Restore service not configured yet.' : '恢復服務尚未設定，請聯繫管理員。'; msg.className = 'cg-msg err'; }
+    return;
+  }
+
+  _setRestoreBtn(true);
+  const reEnableTimer = setTimeout(() => _setRestoreBtn(false), 3000);
+
+  try {
+    const result = await restoreViaAPI(code, email);
+    clearTimeout(reEnableTimer);
+    _setRestoreBtn(false);
+
+    if(result.ok){
+      const credits    = result.credits;
+      const { balance } = getCreditState();
+      const newBalance = balance + credits;
+      _cgSet(CREDIT_KEY, newBalance);
+      if(input) input.classList.add('valid');
+      if(msg){
+        msg.innerHTML = isEn
+          ? `✦ Restored! +${credits} credits. Balance: ${newBalance}.<br><span style="font-size:11px;opacity:.7;">Credits have been restored to this browser.</span>`
+          : `✦ 恢復成功！+${credits} 點，餘額：${newBalance} 點。<br><span style="font-size:11px;opacity:.7;">點數已恢復至此瀏覽器。</span>`;
+        msg.className = 'cg-msg ok';
+      }
+      renderCreditCard();
+      setTimeout(closeRestoreModal, 3200);
+    } else {
+      if(input) input.classList.add('invalid');
+      const reason = result.reason || 'server_error';
+      const m = RESTORE_ERROR_MSG[reason] || RESTORE_ERROR_MSG['server_error'];
+      if(msg){ msg.textContent = isEn ? m.en : m.zh; msg.className = 'cg-msg err'; }
+    }
+  } catch(err) {
+    clearTimeout(reEnableTimer);
+    _setRestoreBtn(false);
+    if(input) input.classList.add('invalid');
+    const m = RESTORE_ERROR_MSG['network_error'];
+    if(msg){ msg.textContent = isEn ? m.en : m.zh; msg.className = 'cg-msg err'; }
+  }
+}
+
 function buyCredits(){
   const isEn = currentLang === 'en';
   const btn = document.getElementById('gate-btn-buy');
@@ -4006,6 +4121,27 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="cg-actions">
         <button class="btn btn-ghost" onclick="closeRedeemModal()" id="rdm-btn-cancel">取消</button>
         <button class="btn btn-primary" onclick="submitRedeem()" id="rdm-btn-submit" style="min-width:80px;">兑換</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- v3.6.3 Restore Credits Modal -->
+  <div class="cg-overlay" id="restore-overlay" onclick="if(event.target===this)closeRestoreModal()">
+    <div class="cg-panel">
+      <div class="cg-panel-title" id="rst-title">恢復點數</div>
+      <div class="cg-panel-sub" id="rst-sub">如果你換了裝置、瀏覽器，或使用私密瀏覽導致點數沒有顯示，可以用兌換碼與電子信箱嘗試恢復。</div>
+      <input class="cg-input" id="rst-input" type="text" placeholder="例如 XXXX-XXXX-0"
+             autocomplete="off" spellcheck="false"
+             oninput="document.getElementById('rst-input').classList.remove('invalid','valid');document.getElementById('rst-msg').textContent='';document.getElementById('rst-msg').className='cg-msg';"
+             onkeydown="if(event.key==='Enter')submitRestore()"/>
+      <input class="cg-input" id="rst-email" type="email" placeholder="兌換時填入的電子信箱（如有 / Email used when redeeming）"
+             autocomplete="email" spellcheck="false"
+             style="margin-top:8px;font-size:13px;opacity:0.72;"
+             onkeydown="if(event.key==='Enter')submitRestore()"/>
+      <div class="cg-msg" id="rst-msg"></div>
+      <div class="cg-actions">
+        <button class="btn btn-ghost" onclick="closeRestoreModal()" id="rst-btn-cancel">取消</button>
+        <button class="btn btn-primary" onclick="submitRestore()" id="rst-btn-submit" style="min-width:80px;">恢復</button>
       </div>
     </div>
   </div>
