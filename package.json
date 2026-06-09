@@ -1,0 +1,11 @@
+{
+  "name": "propri-proof-of-rights-generator",
+  "version": "3.6.4",
+  "private": true,
+  "dependencies": {
+    "html-pdf-node": "^1.0.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

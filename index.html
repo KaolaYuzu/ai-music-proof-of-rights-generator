@@ -1081,6 +1081,25 @@ textarea { resize: vertical; min-height: 100px; }
 }
 .toast.in { opacity: 1; }
 
+/* ── Preview watermark — shown inside doc-overlay only ── */
+.preview-watermark {
+  display: none;
+  position: fixed;
+  bottom: 16px;
+  right: 20px;
+  font-size: 12px;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+  color: rgba(0,0,0,0.28);
+  background: rgba(255,255,255,0.60);
+  padding: 3px 9px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 200;
+  letter-spacing: .05em;
+  user-select: none;
+}
+#doc-overlay.show .preview-watermark { display: block; }
+
 /* print */
 @media print {
   html, body { background: #fff !important; height: auto !important; overflow: visible !important; }
@@ -1097,6 +1116,16 @@ textarea { resize: vertical; min-height: 100px; }
   }
   .doc-section { page-break-inside: avoid; }
   .doc-footer { page-break-after: avoid; }
+  .preview-watermark {
+    display: block !important;
+    position: fixed;
+    bottom: 10mm;
+    right: 12mm;
+    font-size: 9pt;
+    color: rgba(0,0,0,0.20) !important;
+    background: transparent !important;
+    z-index: 9999;
+  }
 }
 /* scrollbar */
 ::-webkit-scrollbar { width: 5px; }
@@ -1731,6 +1760,7 @@ html[lang="en"] .save-pill {
     </div>
     <div class="doc-footer">propri · Rights QA Journal v3.6.4 · 2026-05-30</div>
   </div>
+  <div class="preview-watermark">Preview Copy · propri</div>
 </div>
 
 
@@ -2187,6 +2217,7 @@ html[lang="en"] .save-pill {
         <button class="btn btn-ghost" id="btn-openDocFull" onclick="openDoc()" style="justify-content:center;" title="Preview document — no credit charged">🔍 預覽文件</button>
         <div style="font-size:11px;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.07em;padding-top:8px;" id="s8-export-label">正式輸出（各扣 1 點）</div>
         <button class="btn btn-primary" id="btn-exportPDF" onclick="gatedExportPDF()" style="justify-content:center;" data-i18n="btn-exportPDF">🖨 正式輸出 PDF（扣 1 credit）</button>
+        <button class="btn btn-primary" id="btn-official-export" onclick="gatedOfficialExportPDF()" style="justify-content:center;background:linear-gradient(135deg,rgba(29,99,58,.55),rgba(64,145,108,.45));border:1px solid rgba(64,145,108,.50);" data-i18n="btn-official-export">⬇ 下載正式 PDF（1 credit）</button>
         <button class="btn btn-ghost"   id="btn-exportJSON" onclick="gatedExportJSON()" style="justify-content:center;" data-i18n="btn-exportJSON">{ } 下載 JSON 存檔（扣 1 credit）</button>
         <button class="btn btn-ghost"   id="btn-copyText" onclick="gatedCopyText()" style="justify-content:center;" data-i18n="btn-copyText">⎘ 複製純文字報告（扣 1 credit）</button>
       </div>
@@ -2394,6 +2425,7 @@ const STRINGS = {
     's7-summary-hint':'此處為重點摘要。請點擊「查看完整文件預覽」確認完整文件內容。',
     'evidence-ext-notice':'📎 本文件記錄證據檔案與創作流程。若發行商、平台或申訴流程需要完整佐證，請將 Suno 迭代截圖、AI 使用紀錄、LANDR 截圖、音訊檔與封面權利資料一併另行上傳或保存。',
     'btn-exportPDF':'🖨 正式輸出 PDF（扣 1 credit）',
+    'btn-official-export':'⬇ 下載正式 PDF（1 credit）',
     'btn-exportJSON':'{ } 下載 JSON 存檔（扣 1 credit）',
     'btn-copyText':'⎘ 複製純文字報告（扣 1 credit）',
     'btn-back-disabled':'← 返回','btn-continue':'繼續 →','btn-back':'← 返回',
@@ -2632,6 +2664,7 @@ const STRINGS = {
     's7-summary-hint':'This is a review summary. Open the full document preview to check the complete record.',
     'evidence-ext-notice':'📎 This document records the evidence trail and file references. If a distributor, platform, or rights review requires full proof, upload or archive the supporting files separately, including Suno iteration screenshots, AI usage records, LANDR screenshots, audio files, and cover art rights materials.',
     'btn-exportPDF':'🖨 Formal PDF Export (Uses 1 credit)',
+    'btn-official-export':'⬇ Official PDF Export (1 credit)',
     'btn-exportJSON':'{ } Download JSON Archive (Uses 1 credit)',
     'btn-copyText':'⎘ Copy Plain Text Report (Uses 1 credit)',
     'l-sampleUse':'Sample Use','sampleUse-helper':'"Sampling" means using part of an existing sound recording, melody, vocal, beat, rhythm loop, or another work inside this release. Not all AI music involves sampling — if you only used AI to generate completely new melodies or sounds, you can typically choose "No samples".',
@@ -3757,6 +3790,60 @@ function gatedExportPDF(){
   });
 }
 
+/* ── v1 Official Export — backend PDF via /api/export-pdf ── */
+async function gatedOfficialExportPDF(){
+  if(!checkExportReady()) return;
+  /* Capture balance BEFORE gateExport deducts — used for rollback */
+  const balanceBefore = _cgGet(CREDIT_KEY, 0);
+  gateExport(async ()=>{
+    const isEn = currentLang === 'en';
+    const btn  = document.getElementById('btn-official-export');
+    if(btn){ btn.disabled = true; btn.textContent = isEn ? 'Generating…' : '生成中…'; }
+    /* Build a reproducible Document ID */
+    const docId = 'PROPRI-'
+      + new Date().toISOString().slice(0,10).replace(/-/g,'')
+      + '-'
+      + crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase();
+    const ts = new Date().toISOString();
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(()=>controller.abort(), 15000);
+    try{
+      const resp = await fetch('/api/export-pdf', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ documentJSON: D, lang: currentLang, documentId: docId, timestamp: ts }),
+        signal:  controller.signal
+      });
+      clearTimeout(timeoutId);
+      if(!resp.ok) throw new Error('server_error');
+      const blob = await resp.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      /* sanitise title for filename: keep ASCII alnum + common CJK range */
+      const safeName = (D.trackTitle||'propri')
+        .replace(/[^a-zA-Z0-9一-鿿぀-ヿ]/g,'_')
+        .replace(/_+/g,'_')
+        .replace(/^_|_$/g,'')
+        .slice(0,30);
+      a.href     = url;
+      a.download = `propri_proof_${safeName}_${ts.slice(0,10).replace(/-/g,'')}_${docId.split('-')[2]}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast(isEn ? '✦ Official PDF downloaded' : '✦ 正式 PDF 已下載');
+    } catch(e){
+      clearTimeout(timeoutId);
+      /* Credit rollback — restore balance to before gateExport deduction */
+      _cgSet(CREDIT_KEY, balanceBefore);
+      renderCreditCard();
+      toast(isEn ? '⚠ Export failed — credit refunded' : '⚠ 生成失敗，點數已退回');
+    } finally{
+      if(btn){
+        btn.disabled    = false;
+        btn.textContent = isEn ? '⬇ Official PDF Export (1 credit)' : '⬇ 下載正式 PDF（1 credit）';
+      }
+    }
+  });
+}
 
 /* ── Redeem Modal ── */
 function openRedeemModal(){
