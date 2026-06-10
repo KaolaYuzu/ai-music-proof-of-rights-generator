@@ -1103,12 +1103,12 @@ textarea { resize: vertical; min-height: 100px; }
 }
 .preview-wm-stamp {
   position: fixed;
-  bottom: 48px;
-  right: 48px;
+  bottom: 40px;
+  right: 40px;
   width: 180px;
   height: 180px;
   opacity: 0.18;
-  z-index: 200;
+  z-index: 300;
 }
 #doc-overlay.show .preview-wm-text,
 #doc-overlay.show .preview-wm-stamp { display: block; }
@@ -1570,6 +1570,13 @@ html[lang="en"] .save-pill {
   /* ── Propi floating cursor (mobile only) ── */
   .propi-float {
     display: flex !important;
+  }
+  /* ── Preview stamp: smaller on mobile ── */
+  .preview-wm-stamp {
+    width: 120px !important;
+    height: 120px !important;
+    bottom: 28px !important;
+    right: 16px !important;
   }
 }
 
