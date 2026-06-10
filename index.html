@@ -1087,23 +1087,27 @@ textarea { resize: vertical; min-height: 100px; }
 
 .preview-wm-text {
   position: absolute;
-  top: 50%;
+  top: 48%;
   left: 50%;
-  transform: translate(-50%, -50%) rotate(-45deg);
-  font-size: 78px;
+  width: 110%;
+  text-align: center;
+  transform: translate(-50%, -50%) rotate(-38deg);
+  font-size: clamp(120px, 18vw, 260px);
   font-family: Georgia, 'Times New Roman', serif;
   font-weight: 700;
-  color: rgba(122,92,255,0.17);
+  color: rgba(122,92,255,1);
+  opacity: 0.18;
   white-space: nowrap;
   z-index: 10;
   letter-spacing: 0.06em;
 }
 .preview-wm-stamp {
   position: absolute;
-  bottom: 80px;
-  right: 60px;
-  width: 130px;
-  height: 130px;
+  bottom: 72px;
+  right: 72px;
+  width: 180px;
+  height: 180px;
+  opacity: 0.18;
   z-index: 10;
 }
 #doc-overlay.show .preview-wm-text,
@@ -1130,19 +1134,23 @@ textarea { resize: vertical; min-height: 100px; }
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    font-size: 64pt;
-    color: rgba(122,92,255,0.17) !important;
+    width: 110%;
+    text-align: center;
+    transform: translate(-50%, -50%) rotate(-38deg);
+    font-size: 96pt;
+    color: rgba(122,92,255,1) !important;
+    opacity: 0.17 !important;
     background: none !important;
     z-index: 9999;
   }
   .preview-wm-stamp {
     display: block !important;
     position: fixed;
-    bottom: 10mm;
-    right: 12mm;
-    width: 110px;
-    height: 110px;
+    bottom: 64px;
+    right: 56px;
+    width: 150px;
+    height: 150px;
+    opacity: 0.17 !important;
     z-index: 9999;
   }
 }
